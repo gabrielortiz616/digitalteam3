@@ -72,8 +72,8 @@ SIGNAL flag_offset : STD_LOGIC;
 SIGNAL flag_out : STD_LOGIC_VECTOR(1 downto 0);
 
 ---- Missing
---SIGNAL OE_AC701, CS_AC701 : STD_LOGIC;
---SIGNAL LFO_wave : STD_LOGIC_VECTOR(11 downto 0);
+SIGNAL OE_AC701, CS_AC701 : STD_LOGIC;
+SIGNAL LFO_wave : STD_LOGIC_VECTOR(11 downto 0);
 
 COMPONENT clk_enable IS
 	PORT(clk : IN STD_LOGIC;
