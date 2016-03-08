@@ -14,6 +14,7 @@ ARCHITECTURE behavior OF clk_enable IS
     SIGNAL counter_en : INTEGER range 0 TO 100000000 :=0;
 
 BEGIN
+
 	PROCESS(clk)
     variable int_sclk : STD_LOGIC := '1';
 	BEGIN
