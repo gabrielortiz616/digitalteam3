@@ -9,15 +9,18 @@ entity biquad_ver2 is
              			Taps:INTEGER:=3;
 				WIDTH_LFO: INTEGER :=12);
 		Port ( 
-				clk, OE_AC701, CS_AC701, sample_clk : in  STD_LOGIC;
+				clk, sample_clk : in  STD_LOGIC;
 				x_IN : in  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0);
 				LFO : in STD_LOGIC_VECTOR(WIDTH_LFO-1 downto 0);
 				knob : IN STD_LOGIC_VECTOR(6 downto 0);
 				Q_in : in STD_LOGIC_VECTOR(6 downto 0);
 				knob_active : IN STD_LOGIC;
 				LFO_active : IN STD_LOGIC;
-				FWave : out  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0)
-				);
+			FWave : out  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0);
+				Filter_from_microA : in STD_LOGIC_VECTOR(31 downto 0);
+				Filter_from_microB : in STD_LOGIC_VECTOR(31 downto 0);
+			Filter_to_micro : out STD_LOGIC_VECTOR(31 downto 0)
+			);
 end biquad_ver2;
 
 --------------------------------------------------------------------------------
@@ -41,21 +44,7 @@ signal clk_S : STD_LOGIC;
 SIGNAL fc : STD_LOGIC_VECTOR(11 downto 0);
 SIGNAL B0_temp,a1_temp,a2_temp, fc_temp, Q_temp : STD_LOGIC_VECTOR(7 downto 0);
 
---COMPONENT counter IS
---      PORT(clk:IN STD_LOGIC;
---           count_max: IN INTEGER;
---	   count_duty: IN INTEGER;
---	   clk_out: OUT STD_LOGIC);
---END COMPONENT counter;
---
---
---COMPONENT Coef is
---		Port ( 
---				fc, Q : IN STD_LOGIC_VECTOR(7 downto 0);
---				CS_AC701, OE_AC701 : IN STD_LOGIC; --WE_AC701;
---				a1,a2,B0 : OUT STD_LOGIC_VECTOR(7 downto 0)
---				);
---end COMPONENT;
+
 
 --------------------------------------------------------------------------------
 -- Coeficient declaration and calculation
@@ -72,14 +61,6 @@ begin
 -- frac2 <= WIDTH_filter-2;
 -- frac <= 2**frac2;
 
--- Calculation of coeficient
-
---counter_filter_comp:
---COMPONENT counter
---         PORT MAP(clk=>clk,
---	 	  count_max => 4,
---		  count_duty => 3,
---		  clk_out => clk_S);
 
 process(clk)
 BEGIN
@@ -88,31 +69,17 @@ BEGIN
 			--fc <= STD_LOGIC_VECTOR(unsigned(LFO)/16); 		--12 bits are 4096 worth
 
 		elsif(knob_active = '1') then
-			--fc <= STD_LOGIC_VECTOR(unsigned(knob) * 32/16);
+			fc <= knob & "00000";
 		
 		else
-			fc <= "000001111101"; -- 2000/16
+			fc <= "011111010000"; -- 2000
 		end if;
+		Filter_to_micro(11 downto 0) <= fc;
+		Filter_to_micro(18 downto 12) <= Q_in ;
+		
 	end if;
 end process;
 
---Coef_comp: Coef
---port map( 	fc => fc,
---		Q => Q_in,
---		CS_AC701 => CS_AC701, 
---		OE_AC701 => OE_AC701,--WE_AC701,
---		a1 => a1_temp,
---		a2 => a2_temp,
---		B0 => B0_temp
---		);
-
-
---B0 <= to_integer(to_unsigned(B0_temp))*32;
---B1 <= 2*to_integer(to_unsigned(B0_temp))*32;
---B2 <= to_integer(to_unsigned(B0_temp))*32;
---a0 <= 1024;
---a1 <= to_integer(to_unsigned(a1_temp))*32;
---a2 <= to_integer(to_unsigned(a2_temp))*32;
 
 
  G <= 300;
@@ -123,12 +90,19 @@ end process;
 -- a1 <= -1597;---6394;---1597;
 -- a2 <= 655;--655;
 
- B0 <= 1*G;--21*G;
- B1 <= 2*B0;
- B2 <= B0;
- a0 <= 1024*G;
- a1 <= 1957*G;--1599*G;
- a2 <= 937*G;--657*G;
+-- B0 <= 1*G;--21*G;
+-- B1 <= 2*B0;
+-- B2 <= B0;
+-- a0 <= 1024*G;
+-- a1 <= 1957*G;--1599*G;
+-- a2 <= 937*G;--657*G;
+
+B0 <= to_integer(unsigned(Filter_from_microB(11 downto 0)))*G;
+B1 <= 2*B0;
+B2 <= B0;
+a0 <= 1024*G;
+a1 <= to_integer(unsigned(Filter_from_microA(11 downto 0)))*G;
+a2 <= to_integer(unsigned(Filter_from_microA(23 downto 12)))*G;
 
 
 -- When simulating check so that they have the correct value
@@ -143,7 +117,7 @@ begin
 			x_S0  <= STD_LOGIC_VECTOR(unsigned(x_IN)-2048);
 			x_S1 <= x_S0;
 			x_S2 <= x_S1;
-			FWave <= STD_LOGIC_VECTOR(signed(y_S0)+2048); --y_S0(5 downto 0))*63
+			FWave <= y_S0;--STD_LOGIC_VECTOR(signed(y_S0) + 2048); --y_S0(5 downto 0))*63
 			y_S1 <= y_S0;
 			y_S2 <= y_S1;
 		end if;

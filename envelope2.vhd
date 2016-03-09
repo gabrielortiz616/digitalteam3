@@ -131,11 +131,11 @@ BEGIN
 			end if;
 		end if;
 		if(attack='1') then
-                    EWave <= STD_LOGIC_VECTOR(unsigned(FWave(11 downto 6))*countA_S);
+                    EWave <= STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*countA_S + 2048);
                 elsif(sustain='1') then
-                    EWave <= FWave;
+                    EWave <= STD_LOGIC_VECTOR(signed(FWave) + 2048);--STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*64 + 2048);
                 elsif(release='1') then
-                    EWave <= STD_LOGIC_VECTOR(unsigned(FWave(11 downto 6))*countR_S);
+                    EWave <= STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*countR_S + 2048);
                 else
                     EWave <= (OTHERS => '0');
          end if;

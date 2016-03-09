@@ -6,16 +6,17 @@ Library UNISIM;
 use UNISIM.vcomponents.all;
 
 ENTITY TOP_Entity is
-      GENERIC(N:INTEGER:=4);
-      PORT(clk : IN STD_LOGIC;	
-		   RESET : IN STD_LOGIC;
-           from_micro_reg0 : IN STD_LOGIC_VECTOR(7 downto 0);
-           from_micro_reg1 : IN STD_LOGIC_VECTOR(7 downto 0);
-           to_micro : out STD_LOGIC_VECTOR(4 downto 0);
-		   --LED
-           LED_port : out STD_LOGIC_VECTOR(3 downto 0);
-           midi_in : in STD_LOGIC;
-           SPI : out STD_LOGIC_VECTOR(3 downto 0));
+    GENERIC(N:INTEGER:=4);
+    PORT(clk : IN STD_LOGIC;	
+        RESET : IN STD_LOGIC;		   
+        midi_in : in STD_LOGIC;		   
+        from_micro_reg0 : IN STD_LOGIC_VECTOR(7 downto 0);
+        from_micro_reg1 : IN STD_LOGIC_VECTOR(7 downto 0);
+        to_micro_reg2 : OUT STD_LOGIC_VECTOR(4 downto 0);
+        from_micro_reg3 : IN STD_LOGIC_VECTOR(31 downto 0);
+        from_micro_reg4 : IN STD_LOGIC_VECTOR(31 downto 0);
+        to_micro_reg5 : OUT STD_LOGIC_VECTOR(31 downto 0);
+        SPI : out STD_LOGIC_VECTOR(3 downto 0));
 END TOP_Entity;
 
 ARCHITECTURE arch_TOP_Entity OF TOP_Entity IS
@@ -26,24 +27,18 @@ SIGNAL sclk_en_temp : STD_LOGIC;
 --signal I : std_logic;
 --signal IB : std_logic;
 SIGNAL midi_note : STD_LOGIC_VECTOR(7 DOWNTO 0);
-SIGNAL midi_note_fake : STD_LOGIC_VECTOR(7 DOWNTO 0);
 SIGNAL wave_type1 : STD_LOGIC_VECTOR(2 downto 0);
 SIGNAL wave_type2 : STD_LOGIC_VECTOR(2 downto 0);
 SIGNAL note_on_temp : STD_LOGIC;
 SIGNAL rate_temp : STD_LOGIC;
-SIGNAL note_ch_temp : STD_LOGIC_VECTOR(3 downto 0);
-SIGNAL midi_control_temp : STD_LOGIC_VECTOR(6 downto 0);
-SIGNAL midi_control_data_temp : STD_LOGIC_VECTOR(6 downto 0);
-SIGNAL control_temp : STD_LOGIC_VECTOR(3 downto 0);
-SIGNAL duty_cycle_temp : STD_LOGIC_VECTOR(6 DOWNTO 0); 
+SIGNAL duty_cycle_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0); 
 SIGNAL duty_cycle_temp2 : STD_LOGIC_VECTOR(6 DOWNTO 0); 
 SIGNAL duty_cycle_midi : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL offset_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);  
 SIGNAL offset_midi : STD_LOGIC_VECTOR(6 DOWNTO 0);  
-SIGNAL osc_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
+SIGNAL osc_out_temp1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL osc_out_temp2 : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL offset_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0);  -- MISSING CONNECTION FROM MIDI
-SIGNAL duty_cycle_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0); -- MISSING CONNECTION FROM MIDI
+
 
 SIGNAL lfo_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
@@ -52,12 +47,7 @@ SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
 
 -- Joakim
 
-SIGNAL oscout_temp,FWave_temp, EWave_temp, Wave_OUT_temp : STD_LOGIC_VECTOR(11 downto 0);
---SIGNAL midi_note_temp: STD_LOGIC_VECTOR(7 DOWNTO 0);
---SIGNAL wave_type_temp: STD_LOGIC_VECTOR(1 DOWNTO 0);
---SIGNAL duty_cycle_temp: STD_LOGIC_VECTOR(11 DOWNTO 0);
---SIGNAL offset_temp: STD_LOGIC_VECTOR(4 DOWNTO 0);
---SIGNAL reset, note_on_temp : STD_LOGIC;
+SIGNAL FWave_temp, EWave_temp, Wave_OUT_temp : STD_LOGIC_VECTOR(11 downto 0);
 SIGNAL Q_temp : STD_LOGIC_VECTOR(6 downto 0);
 SIGNAL time_sustain_temp, time_release_temp, time_attack_temp, cut_off_temp,
 	LFO_max_temp, LFO_freq_temp, velocity_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000";
@@ -71,10 +61,8 @@ SIGNAL flag_duty_cycle2 : STD_LOGIC;
 SIGNAL flag_offset : STD_LOGIC;
 SIGNAL flag_out : STD_LOGIC_VECTOR(1 downto 0);
 
----- Missing
-SIGNAL OE_AC701, CS_AC701 : STD_LOGIC;
-SIGNAL LFO_wave : STD_LOGIC_VECTOR(11 downto 0);
 
+-----COMPONENTS DEFINITION----------
 COMPONENT clk_enable IS
 	PORT(clk : IN STD_LOGIC;
         sample_clk : OUT STD_LOGIC;
@@ -128,49 +116,49 @@ COMPONENT DAC
 END COMPONENT DAC;
 
 COMPONENT envelope
-  port(
-		clk : IN STD_LOGIC;
-		sample_clk : IN STD_LOGIC;
-		time_sustain : IN STD_LOGIC_VECTOR(6 downto 0);
-		time_release : IN STD_LOGIC_VECTOR(6 downto 0);
-		time_attack : IN STD_LOGIC_VECTOR(6 downto 0);
-		FWave : IN STD_LOGIC_VECTOR(11 downto 0);
-		NOTE_ON : IN STD_LOGIC;
-	EWave : OUT STD_LOGIC_VECTOR(11 downto 0));
+    port(
+        clk : IN STD_LOGIC;
+        sample_clk : IN STD_LOGIC;
+        time_sustain : IN STD_LOGIC_VECTOR(6 downto 0);
+        time_release : IN STD_LOGIC_VECTOR(6 downto 0);
+        time_attack : IN STD_LOGIC_VECTOR(6 downto 0);
+        FWave : IN STD_LOGIC_VECTOR(11 downto 0);
+        NOTE_ON : IN STD_LOGIC;
+        EWave : OUT STD_LOGIC_VECTOR(11 downto 0));
 END COMPONENT;
 
 COMPONENT biquad_ver2
-  port(
-		clk, OE_AC701, CS_AC701, sample_clk : in  STD_LOGIC;
+   port(
+		clk : in  STD_LOGIC;
+	    sample_clk  : in  STD_LOGIC;
 		x_IN : in  STD_LOGIC_VECTOR (11 downto 0);
 		LFO : in STD_LOGIC_VECTOR(11 downto 0);
 		knob : IN STD_LOGIC_VECTOR(6 downto 0);
 		Q_in : in STD_LOGIC_VECTOR(6 downto 0);
 		knob_active : IN STD_LOGIC;
 		LFO_active : IN STD_LOGIC;
-	FWave : out  STD_LOGIC_VECTOR (11 downto 0));
+	    FWave : out  STD_LOGIC_VECTOR (11 downto 0);
+		Filter_from_microA : in STD_LOGIC_VECTOR(31 downto 0);
+		Filter_from_microB : in STD_LOGIC_VECTOR(31 downto 0);
+	    Filter_to_micro : out STD_LOGIC_VECTOR(31 downto 0));
 END COMPONENT;
 
 COMPONENT MIDI_par is
-		Port ( 
-			clk : in  STD_LOGIC;
-			midi_in   : in  std_logic;
-            Q_value, cut_off, LFO_max, LFO_freq, time_sustain,
-            time_release, time_attack, osc_offset, duty_cycle :
-            OUT STD_LOGIC_VECTOR(6 downto 0);
-            midi_ch   : out std_logic_vector(3 downto 0);
-            note_on : OUT STD_LOGIC;
-            midi_note : OUT STD_LOGIC_VECTOR(7 downto 0)
-            );
+    Port ( 
+        clk : in  STD_LOGIC;
+        midi_in   : in  std_logic;
+        Q_value, cut_off, LFO_max, LFO_freq, time_sustain,
+        time_release, time_attack, osc_offset, duty_cycle :
+        OUT STD_LOGIC_VECTOR(6 downto 0);
+        midi_ch   : out std_logic_vector(3 downto 0);
+        note_on : OUT STD_LOGIC;
+        midi_note : OUT STD_LOGIC_VECTOR(7 downto 0)
+        );
 end COMPONENT;
+-----END COMPONENTS DEFINITION----------
 
 
 BEGIN
-
---midi_note <= "00111100";
---offset_temp <= "00100";
---wave_type <= GPIO_DIP_SW3 & GPIO_DIP_SW2 & GPIO_DIP_SW1;
-
 
 PROCESS(clk)
 BEGIN
@@ -213,9 +201,9 @@ IF rising_edge(clk) THEN
     
     ------FLAGS ASSESMENT------
     IF flag_duty_cycle1 = '1' THEN 
-         duty_cycle_temp <= lfo_out_temp(6 downto 0);           
+         duty_cycle_temp1 <= lfo_out_temp(6 downto 0);           
     ELSE
-         duty_cycle_temp <= duty_cycle_midi;
+         duty_cycle_temp1 <= duty_cycle_midi;
     END IF;
     IF flag_duty_cycle2 = '1' THEN 
         duty_cycle_temp2 <= lfo_out_temp(6 downto 0);        
@@ -228,11 +216,11 @@ IF rising_edge(clk) THEN
         offset_temp <= offset_midi;
     END IF; 
     IF flag_out = "01" THEN 
-        output_temp(23 downto 12) <= osc_out_temp;        
+        output_temp(23 downto 12) <= osc_out_temp1;        
     ELSIF flag_out = "10" THEN 
         output_temp(23 downto 12) <= osc_out_temp2;    
     ELSE
-        output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));   
+        output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));   
     END IF;    
 
 END IF;
@@ -272,13 +260,13 @@ MIDI_par_comp : MIDI_par
 OSC_Main1 : OSC_Main
 	port map(midi_note => midi_note,
 		     wave_type => wave_type1,
-             duty_cycle => duty_cycle_temp,
+             duty_cycle => duty_cycle_temp1,
              offset => "0000000",
              offset_integer_out => offset_null,
              clk => clk,
              sample_clk => sample_clk_temp,
 		     reset => RESET,
-             oscout => osc_out_temp);
+             oscout => osc_out_temp1);
 
 OSC_Main2 : OSC_Main
 	port map(midi_note => midi_note,
@@ -305,16 +293,17 @@ cut_off_temp <= "0111110";
 
 biquad_ver2_comp1:biquad_ver2
 port map( 	clk => clk,
-       sample_clk => sample_clk_temp,
-		OE_AC701 => OE_AC701,
-		CS_AC701 => CS_AC701,
+        sample_clk => sample_clk_temp,
 	  	x_IN =>  osc_out_temp,
 		LFO => LFO_wave,
 		knob => cut_off_temp,
 		Q_in => Q_temp,
-		knob_active => '0',	-- Will be needed to be set by button
+		knob_active => '1',	-- Will be needed to be set by button
 		LFO_active => '0',	-- Will be needed to be set by button
-	FWave => FWave_temp); -- Wave_OUT_temp     FWave_temp
+	    FWave => FWave_temp,
+		Filter_from_microA => from_micro_reg3,
+		Filter_from_microB => from_micro_reg4,
+	    Filter_to_micro => to_micro_reg5);
 	
 
 --time_attack_temp  <= "0010000";	--64
@@ -331,7 +320,7 @@ envelope_comp1: envelope
 		time_attack => time_attack_temp,
 		FWave => FWave_temp, -- FWave_temp   osc_out_temp
 		NOTE_ON => note_on_temp,
-	EWave => Wave_OUT_temp);
+	    EWave => Wave_OUT_temp);
 
 --output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));
 output_temp(11 downto 0) <= Wave_OUT_temp;
