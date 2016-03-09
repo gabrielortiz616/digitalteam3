@@ -165,12 +165,8 @@ BEGIN
 IF rising_edge(clk) THEN
     IF from_micro_reg0= "00000001" THEN -- CHANGE WAVE TYPE OSCILLATOR 1
         wave_type1 <= from_micro_reg1(2 downto 0);
-        LED_port(0)<= '1';
-        LED_port(1)<= '0';
     ELSIF from_micro_reg0= "00000010"  THEN -- CHANGE WAVE TYPE OSCILLATOR 2
         wave_type2 <= from_micro_reg1(2 downto 0);
-        LED_port(0)<= '0';
-        LED_port(1)<= '1';
     ELSIF from_micro_reg0= "00000011"  THEN -- MIDI or LFO on Duty Cycle OSCILLATOR 1
         IF from_micro_reg1(2 downto 0) = "000" THEN 
             flag_duty_cycle1 <= '0';  --duty_cycle_temp <= duty_cycle_midi;
@@ -273,7 +269,7 @@ OSC_Main2 : OSC_Main
 		    wave_type => wave_type2,
             duty_cycle => duty_cycle_temp2,
             offset => offset_temp,
-            offset_integer_out => to_micro,
+            offset_integer_out => to_micro_reg2,
             clk => clk,
             sample_clk => sample_clk_temp,
 		    reset => RESET,
@@ -288,14 +284,14 @@ LFO1 : LFO
 
 
 
-Q_temp <= "0010110";
-cut_off_temp <= "0111110";
+--Q_temp <= "0010110";
+--cut_off_temp <= "0111110";
 
 biquad_ver2_comp1:biquad_ver2
 port map( 	clk => clk,
         sample_clk => sample_clk_temp,
-	  	x_IN =>  osc_out_temp,
-		LFO => LFO_wave,
+	  	x_IN =>  STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1)))),
+		LFO => lfo_out_temp,
 		knob => cut_off_temp,
 		Q_in => Q_temp,
 		knob_active => '1',	-- Will be needed to be set by button
@@ -322,7 +318,7 @@ envelope_comp1: envelope
 		NOTE_ON => note_on_temp,
 	    EWave => Wave_OUT_temp);
 
---output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));
+--output_temp(23 downto 12) <= 
 output_temp(11 downto 0) <= Wave_OUT_temp;
 
 DAC1 : DAC
