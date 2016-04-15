@@ -43,7 +43,7 @@ SIGNAL offset_int_temp : STD_LOGIC_VECTOR(4 DOWNTO 0);
 SIGNAL duty_int_temp : STD_LOGIC_VECTOR(6 DOWNTO 0); 
 SIGNAL offset_int_temp_prev : STD_LOGIC_VECTOR(4 DOWNTO 0); 
 SIGNAL duty_int_temp_prev : STD_LOGIC_VECTOR(6 DOWNTO 0); 
-SIGNAL lfo_out_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);
+SIGNAL lfo_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
 
 
@@ -106,9 +106,8 @@ COMPONENT LFO
  port(clk:in std_logic;
       sample_clk : IN STD_LOGIC;
       rate_out : out std_logic;  
-      LFO_gain_main_in: in std_logic_vector(6 downto 0);      
-      LFO_freq_main_in : in std_logic_vector(6 downto 0);
-	  lfo_out : out std_logic_vector(6 downto 0));
+      LFO_freq_main_in : in std_logic_vector(7 downto 0);
+	  lfo_out : out std_logic_vector(11 downto 0));
 end COMPONENT;
 
 COMPONENT DAC
@@ -202,17 +201,17 @@ IF rising_edge(clk) THEN
     
     ------FLAGS ASSESMENT------
     IF flag_duty_cycle1 = '1' THEN 
-         duty_cycle_temp1 <= lfo_out_temp;           
+         duty_cycle_temp1 <= lfo_out_temp(6 downto 0);           
     ELSE
          duty_cycle_temp1 <= duty_cycle_midi;
     END IF;
     IF flag_duty_cycle2 = '1' THEN 
-        duty_cycle_temp2 <= lfo_out_temp;        
+        duty_cycle_temp2 <= lfo_out_temp(11 downto 5);        
     ELSE
         duty_cycle_temp2 <= duty_cycle_midi;
     END IF;  
     IF flag_offset = '1' THEN 
-        offset_temp <= lfo_out_temp;
+        offset_temp <= lfo_out_temp(11 downto 5);
     ELSE
         offset_temp <= offset_midi;
     END IF; 
@@ -294,8 +293,7 @@ LFO1 : LFO
  port map (clk => clk,
            sample_clk => sample_clk_temp, 
            rate_out => rate_temp,
-           LFO_gain_main_in => LFO_max_temp,
-           LFO_freq_main_in => LFO_freq_temp,
+           LFO_freq_main_in => '0' & LFO_freq_temp,
 	       lfo_out=> lfo_out_temp);
 
 
@@ -307,7 +305,7 @@ biquad_ver2_comp1:biquad_ver2
 port map( 	clk => clk,
         sample_clk => sample_clk_temp,
 	  	x_IN =>  STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1)))),
-		LFO => lfo_out_temp,
+		LFO => lfo_out_temp(6 downto 0),
 		knob => cut_off_temp,
 		Q_in => Q_temp,
 		knob_active => '1',	-- Will be needed to be set by button
