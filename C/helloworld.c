@@ -106,17 +106,17 @@ int main(void) {
 		
 		float wp, N, tempb0, tempa1, tempa2;
 		double Q_temp;
-		int b0, a1, a2, A, fs, fc, Q, temp1,temp2,temp3;
+		int b0, a1, a2, A, B, fs, fc, Q, temp1,temp2,temp3;
 		long tempin;
-		int type;
+		int filter_type;
 		fs = 40000;
-		type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
+		filter_type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
 		
 		
 		// Read multiplier output from register 1
 		xil_printf("Read : 0x%08x \n\r", *(baseaddr_p+5));
 		tempin = *(baseaddr_p+5);
-
+		
 		Q = (tempin / 4096);
 		fc = tempin - Q*4096;
 		Q_temp = Q/100;
@@ -126,35 +126,85 @@ int main(void) {
 		wp = tan(2 * 3.1415926 * fc / (2 * fs));
 		N = 1*1000 / (wp*wp*1000 + (wp*1000*100 / (Q)) + 1000);
 
-		tempb0 = N *wp*wp    * 1024;
+		
+		if(filter_type==1){				// Lowpass
+			tempb0 = N *wp*wp    				* 1024;
 
-		tempa1 = 2*	N*(wp*wp-1)    * 1024;
-		tempa2 = N*(wp*wp-wp*100/(Q)+1)    * 1024;
+			tempa1 = 2*	N*(wp*wp-1)    			* 1024;
+			tempa2 = N*(wp*wp-wp*100/(Q)+1)    	* 1024;
 
-		b0 = tempb0; //* 1024;
+			b0 = tempb0;
 
-		a1 = abs(tempa1);// * 1024;
-		a2 = tempa2;// * 1024;
+			a1 = abs(tempa1);
+			a2 = tempa2;
 
-		temp1 = wp*1000;
-		temp2 = N*100;
-		temp3 = Q_temp*100;
-		xil_printf("wp: %d \n\r", wp);
-		xil_printf("N: %d \n\r", temp2);
-		xil_printf("a2: %d \n\r", temp3);
-
-		A = a1 + (a2 *4096 );
-
-		// Write multiplier inputs to register 0
-		//*(baseaddr_p+0) = 0x001D4FA5;
-
+		}
+		else if(filter_type==2){			// Highpass
+			b0 = N								* 1024;
+			
+			a1 = abs(2*N*(wp*wp-1))				* 1024;
+			a2 = N*(wp*wp-wp*100/Q+1)			* 1024;
+			
+			B = b0;
+			
+		}
+		else if(filter_type==3){
+			int fl;
+			int fh;
+			int fo;
+			float W;
+			float wpl;
+			float wpu;
+			float wo2;
+			int BW;
+			
+			if(fc > 1000){
+				fl = fc - 200;
+				fh = fc + 200;
+			}
+			else if(fc > 500){
+				fl = fc - 100;
+				fh = fc + 100;
+			}
+			else if(fc > 100){
+				fl = fc - 50;
+				fh = fc + 50;
+			}
+			else if(fc > 20){
+				fl = fc - 10;
+				fh = fc + 10;
+			}
+			else {
+				fl = fc;
+				fh = fc;
+			}
+			
+			fo = sqrt(fl * fu);
+			BW = fh - fl;
+			Q = 100*fo/BW;
+			
+			wpl = tan(3.1415926 * fl / fs);
+			wpu = tan(3.1415926 * fh / fs);
+			W = wpu - wpl;
+			wo2 = wpu * wpl;
+			
+			b0 = W								* 1024;
+			
+			a0 = (1 + W + wo2)					* 1024;
+			a1 = (2 * wo2 - 2)					* 1024;
+			a2 = (1 + wo2 - W)					* 1024;
+			
+			B = b0 + (a0 * 4096);
+			
+		}
+		
+		A = a1 + (a2 * 4096);
+		
 		*(baseaddr_p+3) = A;
 
 		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p+3));
 
-		// Write multiplier inputs to register 0
-		//*(baseaddr_p+1) = 0x00000001;
-		*(baseaddr_p+4) = b0;
+		*(baseaddr_p+4) = B;
 
 		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p+4));
 		
