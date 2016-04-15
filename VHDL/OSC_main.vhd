@@ -9,7 +9,6 @@ ENTITY OSC_Main is
            duty_cycle:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
            offset:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
            offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);
-           duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);
            clk : IN STD_LOGIC;
            sample_clk : IN STD_LOGIC;
 		   reset:IN STD_LOGIC;
@@ -113,7 +112,6 @@ END COMPONENT;
 COMPONENT Square_DC_Reg
 PORT(D : IN STD_LOGIC_VECTOR(6 DOWNTO 0); -- input.
      counter_size : IN STD_LOGIC_VECTOR(11 dOWNTO 0); -- counter size input.
-      duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);
 	  reset : IN STD_LOGIC; -- Reset
 	  clk : IN STD_LOGIC; -- clock.
 	  slowclk : IN STD_LOGIC; -- clock.
@@ -216,7 +214,6 @@ Square_DC_Reg1 : Square_DC_Reg
    port map(
       D => duty_cycle, 
       counter_size => counter_size_temp, 
-      duty_integer_out => duty_integer_out, 
       reset => reset,
       clk => clk,
       slowclk => sample_clk,

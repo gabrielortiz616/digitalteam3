@@ -385,6 +385,7 @@ int kc_LCDPrintString (char* str1, char* str2)
 {
 	int i;
 	kc_SetDDRAM(0x0);
+	xil_printf("Watch below lines on LCD\r\n");
 
 	for(i=0; i<16; i++)
 	{

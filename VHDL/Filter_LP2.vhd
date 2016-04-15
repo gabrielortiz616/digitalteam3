@@ -7,7 +7,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity biquad_ver2 is
 		Generic(	WIDTH_filter:INTEGER:=12;
              			Taps:INTEGER:=3;
-				WIDTH_LFO: INTEGER :=7);
+				WIDTH_LFO: INTEGER :=12);
 		Port ( 
 				clk, sample_clk : in  STD_LOGIC;
 				x_IN : in  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0);
@@ -36,7 +36,7 @@ architecture arch of biquad_ver2 is
 
 type x_HEIGHT is array (0 to Taps-1) of STD_LOGIC_VECTOR(WIDTH_filter-1 downto 0);
 
-signal x_S0,x_S1,x_S2, y_S0, y_S1, y_S2, filtered2, y_S0_temp : STD_LOGIC_VECTOR(WIDTH_filter-1 downto 0):= (Others=> '0');
+signal x_S0,x_S1,x_S2, y_S0, y_S1, y_S2 : STD_LOGIC_VECTOR(WIDTH_filter-1 downto 0):= (Others=> '0');
 signal G,B0,B1,B2,a0,a1,a2,v0,v1,v2,Q,wp,N,fs, frac, temp ,frac2 : INTEGER;
 signal filtered : STD_LOGIC_VECTOR(WIDTH_filter*2-1 downto 0):= (Others=> '0');
 --type Real is range --usually double precision floating point-- ;
@@ -66,7 +66,7 @@ process(clk)
 BEGIN
 	if(rising_edge(clk)) then
 		if(LFO_active = '1') then
-			fc <= LFO & "00000";  -- amount of 0s are 12-WIDTH_LFO  --fc <= STD_LOGIC_VECTOR(unsigned(LFO)/16); 		--12 bits are 4096 worth
+			--fc <= STD_LOGIC_VECTOR(unsigned(LFO)/16); 		--12 bits are 4096 worth
 
 		elsif(knob_active = '1') then
 			fc <= knob & "00000";
@@ -82,7 +82,7 @@ end process;
 
 
 
- G <= 1;
+ G <= 300;
 -- B0 <= 656;--20;
 -- B1 <= 2*B0;--40;
 -- B2 <= B0;
@@ -90,18 +90,18 @@ end process;
 -- a1 <= -1597;---6394;---1597;
 -- a2 <= 655;--655;
 
--- B0 <= 21;--1*G;--21*G;
+-- B0 <= 1*G;--21*G;
 -- B1 <= 2*B0;
 -- B2 <= B0;
--- a0 <= 1024;
--- a1 <= -1598;---1957*G;--1599*G;
--- a2 <= 657;--937*G;--657*G;
+-- a0 <= 1024*G;
+-- a1 <= 1957*G;--1599*G;
+-- a2 <= 937*G;--657*G;
 
 B0 <= to_integer(unsigned(Filter_from_microB(11 downto 0)))*G;
 B1 <= 2*B0;
 B2 <= B0;
 a0 <= 1024*G;
-a1 <= -to_integer(unsigned(Filter_from_microA(11 downto 0)))*G;
+a1 <= to_integer(unsigned(Filter_from_microA(11 downto 0)))*G;
 a2 <= to_integer(unsigned(Filter_from_microA(23 downto 12)))*G;
 
 
@@ -117,7 +117,7 @@ begin
 			x_S0  <= STD_LOGIC_VECTOR(unsigned(x_IN)-2048);
 			x_S1 <= x_S0;
 			x_S2 <= x_S1;
-			FWave <= y_S0;--STD_LOGIC_VECTOR(signed(y_S0) + 2048);
+			FWave <= y_S0;--STD_LOGIC_VECTOR(signed(y_S0) + 2048); --y_S0(5 downto 0))*63
 			y_S1 <= y_S0;
 			y_S2 <= y_S1;
 		end if;
@@ -125,25 +125,27 @@ begin
 end process sample;
 
 --------------------------------------------------------------------------------
+-- Filter calculation of the output
+--v0<=to_integer(signed(x_S(0)))*g;
+--v1<=to_integer(signed(x_S(1)))*g;
+--v2<=to_integer(signed(x_S(2)))*g;
 
 filter: process(clk)
 begin
 	if rising_edge(clk) then
-      --if(sample_clk='1') then
-		filtered <= STD_LOGIC_VECTOR((-a1*signed(y_S1) - a2*signed(y_S2) + a0 +		-- Y part which is -y(n-1)*a1 - y(n-2)*a2
-				B0*signed(x_S0) + B1*signed(x_S1) + B2*signed(x_S2)));	-- X part which is x(n)*B0 + x(n-1)*B1 + x(n-2)*B2
-      --end if		
 
+		filtered <= STD_LOGIC_VECTOR((a1*signed(y_S1) - a2*signed(y_S2) +		-- Y part which is y(n-1)*a1 - y(n-2)*a2
+				B0*signed(x_S0) + B1*signed(x_S1) + B2*signed(x_S2)));	-- X part which is x(n)*B0 + x(n-1)*B1 + x(n-2)*B2
+		
+
+--		filtered <= STD_LOGIC_VECTOR(unsigned(x_S0)*B0 + unsigned(x_S1)*B1 + unsigned(x_S2)*B2 
+--				- unsigned(y_S1)*a1 - unsigned(y_S2)*a2 + a0*4096); -- - a0?
 
 	end if;
 
 end process filter;
 
-
-filtered2 <= STD_LOGIC_VECTOR(signed(filtered(WIDTH_filter*2-1) & filtered(WIDTH_filter*2-3 downto WIDTH_filter-1)));
-y_S0 <= STD_LOGIC_VECTOR(signed(filtered2) SLL 1);
-
-
+y_S0 <= filtered(WIDTH_filter*2-1 downto WIDTH_filter);
 
 
 end arch;
