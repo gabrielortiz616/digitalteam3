@@ -129,7 +129,7 @@ COMPONENT TOP_Entity
           midi_in : in STD_LOGIC;           
           from_micro_reg0 : IN STD_LOGIC_VECTOR(7 downto 0);
           from_micro_reg1 : IN STD_LOGIC_VECTOR(7 downto 0);
-          to_micro_reg2 : OUT STD_LOGIC_VECTOR(31 downto 0);
+          to_micro_reg2 : OUT STD_LOGIC_VECTOR(4 downto 0);
           from_micro_reg3 : IN STD_LOGIC_VECTOR(31 downto 0);
           from_micro_reg4 : IN STD_LOGIC_VECTOR(31 downto 0);
           to_micro_reg5 : OUT STD_LOGIC_VECTOR(31 downto 0);
@@ -435,7 +435,7 @@ TOP_Entity1 : TOP_Entity
                RESET => RESET,
                from_micro_reg0 => slv_reg0(7 downto 0),
                from_micro_reg1 => slv_reg1(7 downto 0),
-               to_micro_reg2 => out_temp,
+               to_micro_reg2 => out_temp(4 downto 0),
                from_micro_reg3 => slv_reg3,
                from_micro_reg4 => slv_reg4,
                to_micro_reg5 => out_temp2,
