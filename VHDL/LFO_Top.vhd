@@ -42,7 +42,7 @@ architecture beh of LFO is
     LUT1 : LFO_freq port map (LFO_freq_in => LFO_freq_main_in, rate =>ratex);
    
 	--LFO_freq_main_in <= "11111111";
-	gain <= "011111";
+	gain <= "111111";
 
 Process(clk)
   
