@@ -81,11 +81,11 @@ BEGIN
 		ELSIF(midi_control_temp = "1011011") then -- setting LFO Amplitude -- CHANNEL 12
 			LFO_max <= midi_control_data_temp;
 
---		ELSIF(midi_control_temp = "XXXXXXX") then -- setting cut-off
---			cut_off <= midi_control_data_temp;
+		ELSIF(midi_control_temp = "0011101") then -- setting cut-off -- CHANNEL 4
+			cut_off <= midi_control_data_temp;
 
---		ELSIF(midi_control_temp = "XXXXXXX") then -- setting resonance
---			Q_value <= midi_control_data_temp;
+		ELSIF(midi_control_temp = "0010000") then -- setting resonance -- CHANNEL 5
+			Q_value <= midi_control_data_temp;
 		END IF;
 	END IF;
 END PROCESS;
