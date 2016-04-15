@@ -6,6 +6,8 @@
 #include "xil_assert.h"
 #include <xuartlite_l.h>
 
+#include "stdlib.h"
+
 #define	XGpio_mSetDataReg		XGpio_WriteReg
 #define	XGpio_mSetDataDirection	XGpio_WriteReg
 extern void InitInst(void);
@@ -98,6 +100,70 @@ int main(void) {
 	*(baseaddr_p + 1) = 0x00000000;
 
 	while (1) {
+		
+		
+		// 		Filters
+		
+		float wp, N, tempb0, tempa1, tempa2;
+		double Q_temp;
+		int b0, a1, a2, A, fs, fc, Q, temp1,temp2,temp3;
+		long tempin;
+		int type;
+		fs = 40000;
+		type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
+		
+		
+		// Read multiplier output from register 1
+		xil_printf("Read : 0x%08x \n\r", *(baseaddr_p+5));
+		tempin = *(baseaddr_p+5);
+
+		Q = (tempin / 4096);
+		fc = tempin - Q*4096;
+		Q_temp = Q/100;
+
+		xil_printf("fc: %d \n\r", fc);
+		xil_printf("Q: %d \n\r", Q);
+		wp = tan(2 * 3.1415926 * fc / (2 * fs));
+		N = 1*1000 / (wp*wp*1000 + (wp*1000*100 / (Q)) + 1000);
+
+		tempb0 = N *wp*wp    * 1024;
+
+		tempa1 = 2*	N*(wp*wp-1)    * 1024;
+		tempa2 = N*(wp*wp-wp*100/(Q)+1)    * 1024;
+
+		b0 = tempb0; //* 1024;
+
+		a1 = abs(tempa1);// * 1024;
+		a2 = tempa2;// * 1024;
+
+		temp1 = wp*1000;
+		temp2 = N*100;
+		temp3 = Q_temp*100;
+		xil_printf("wp: %d \n\r", wp);
+		xil_printf("N: %d \n\r", temp2);
+		xil_printf("a2: %d \n\r", temp3);
+
+		A = a1 + (a2 *4096 );
+
+		// Write multiplier inputs to register 0
+		//*(baseaddr_p+0) = 0x001D4FA5;
+
+		*(baseaddr_p+3) = A;
+
+		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p+3));
+
+		// Write multiplier inputs to register 0
+		//*(baseaddr_p+1) = 0x00000001;
+		*(baseaddr_p+4) = b0;
+
+		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p+4));
+		
+		
+		
+		
+		
+		
+		// 		User interface
 
 		if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1) & 0x00000010)
 				!= 0) {
