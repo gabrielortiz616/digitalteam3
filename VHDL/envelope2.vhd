@@ -37,6 +37,7 @@ SIGNAL timeA_S, timeR_S, timeS_S: STD_LOGIC_VECTOR(11 downto 0);
 SIGNAL countR_S : INTEGER := 63;
 SIGNAL countA,countR,attack,sustain,release, countS : STD_LOGIC:='0';
 SIGNAL idle : STD_LOGIC:='1';
+SIGNAL max : INTEGER;
 SIGNAL time_attack_temp, time_sustain_temp, time_release_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000";
 BEGIN
 
@@ -68,7 +69,7 @@ COMPONENT counter
 
 
 
-
+max <= 64;
 
 process(clk)
 BEGIN
@@ -131,11 +132,11 @@ BEGIN
 			end if;
 		end if;
 		if(attack='1') then
-                    EWave <= STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*countA_S + 2048);
+                    EWave <= STD_LOGIC_VECTOR((signed(STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*(countA_S/2))) SLL 1) + 2048);
                 elsif(sustain='1') then
                     EWave <= STD_LOGIC_VECTOR(signed(FWave) + 2048);--STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*64 + 2048);
                 elsif(release='1') then
-                    EWave <= STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*countR_S + 2048);
+                    EWave <= STD_LOGIC_VECTOR((signed(STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*(countR_S/2))) SLL 1) + 2048);
                 else
                     EWave <= (OTHERS => '0');
          end if;

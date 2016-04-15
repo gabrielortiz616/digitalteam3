@@ -12,7 +12,7 @@ ENTITY TOP_Entity is
         midi_in : in STD_LOGIC;		   
         from_micro_reg0 : IN STD_LOGIC_VECTOR(7 downto 0);
         from_micro_reg1 : IN STD_LOGIC_VECTOR(7 downto 0);
-        to_micro_reg2 : OUT STD_LOGIC_VECTOR(4 downto 0);
+        to_micro_reg2 : OUT STD_LOGIC_VECTOR(31 downto 0);
         from_micro_reg3 : IN STD_LOGIC_VECTOR(31 downto 0);
         from_micro_reg4 : IN STD_LOGIC_VECTOR(31 downto 0);
         to_micro_reg5 : OUT STD_LOGIC_VECTOR(31 downto 0);
@@ -31,15 +31,18 @@ SIGNAL wave_type1 : STD_LOGIC_VECTOR(2 downto 0);
 SIGNAL wave_type2 : STD_LOGIC_VECTOR(2 downto 0);
 SIGNAL note_on_temp : STD_LOGIC;
 SIGNAL rate_temp : STD_LOGIC;
-SIGNAL duty_cycle_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0); 
-SIGNAL duty_cycle_temp2 : STD_LOGIC_VECTOR(6 DOWNTO 0); 
+SIGNAL duty_cycle_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0) := "1000010"; 
+SIGNAL duty_cycle_temp2 : STD_LOGIC_VECTOR(6 DOWNTO 0) := "1000010"; 
 SIGNAL duty_cycle_midi : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL offset_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);  
 SIGNAL offset_midi : STD_LOGIC_VECTOR(6 DOWNTO 0);  
 SIGNAL osc_out_temp1 : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL osc_out_temp2 : STD_LOGIC_VECTOR(11 DOWNTO 0);
 
-
+SIGNAL offset_int_temp : STD_LOGIC_VECTOR(4 DOWNTO 0); 
+SIGNAL duty_int_temp : STD_LOGIC_VECTOR(6 DOWNTO 0); 
+SIGNAL offset_int_temp_prev : STD_LOGIC_VECTOR(4 DOWNTO 0); 
+SIGNAL duty_int_temp_prev : STD_LOGIC_VECTOR(6 DOWNTO 0); 
 SIGNAL lfo_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
 
@@ -91,7 +94,8 @@ COMPONENT OSC_Main
 		   wave_type:IN STD_LOGIC_VECTOR(2 DOWNTO 0);
            duty_cycle:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
            offset:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
-           offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);           
+           offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);  
+           duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);         
            clk : IN STD_LOGIC;
            sample_clk : IN STD_LOGIC;
 		   reset:IN STD_LOGIC;
@@ -132,7 +136,7 @@ COMPONENT biquad_ver2
 		clk : in  STD_LOGIC;
 	    sample_clk  : in  STD_LOGIC;
 		x_IN : in  STD_LOGIC_VECTOR (11 downto 0);
-		LFO : in STD_LOGIC_VECTOR(11 downto 0);
+		LFO : in STD_LOGIC_VECTOR(6 downto 0);
 		knob : IN STD_LOGIC_VECTOR(6 downto 0);
 		Q_in : in STD_LOGIC_VECTOR(6 downto 0);
 		knob_active : IN STD_LOGIC;
@@ -202,12 +206,12 @@ IF rising_edge(clk) THEN
          duty_cycle_temp1 <= duty_cycle_midi;
     END IF;
     IF flag_duty_cycle2 = '1' THEN 
-        duty_cycle_temp2 <= lfo_out_temp(6 downto 0);        
+        duty_cycle_temp2 <= lfo_out_temp(11 downto 5);        
     ELSE
         duty_cycle_temp2 <= duty_cycle_midi;
     END IF;  
     IF flag_offset = '1' THEN 
-        offset_temp <= lfo_out_temp(6 downto 0);
+        offset_temp <= lfo_out_temp(11 downto 5);
     ELSE
         offset_temp <= offset_midi;
     END IF; 
@@ -219,6 +223,15 @@ IF rising_edge(clk) THEN
         output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));   
     END IF;    
 
+
+IF offset_int_temp /= offset_int_temp_prev THEN
+    to_micro_reg2 <= "000000000000000000000000000" & offset_int_temp;
+    offset_int_temp_prev <= offset_int_temp;
+ELSIF duty_int_temp /= duty_int_temp_prev THEN
+    to_micro_reg2 <= "1000000000000000000000000" & duty_int_temp;
+    duty_int_temp_prev <= duty_int_temp;
+END IF;    
+    
 END IF;
 END PROCESS;
 
@@ -269,7 +282,8 @@ OSC_Main2 : OSC_Main
 		    wave_type => wave_type2,
             duty_cycle => duty_cycle_temp2,
             offset => offset_temp,
-            offset_integer_out => to_micro_reg2,
+            offset_integer_out => offset_int_temp,
+            duty_integer_out => duty_int_temp,
             clk => clk,
             sample_clk => sample_clk_temp,
 		    reset => RESET,
@@ -291,7 +305,7 @@ biquad_ver2_comp1:biquad_ver2
 port map( 	clk => clk,
         sample_clk => sample_clk_temp,
 	  	x_IN =>  STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1)))),
-		LFO => lfo_out_temp,
+		LFO => lfo_out_temp(6 downto 0),
 		knob => cut_off_temp,
 		Q_in => Q_temp,
 		knob_active => '1',	-- Will be needed to be set by button
