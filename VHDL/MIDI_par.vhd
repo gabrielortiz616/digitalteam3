@@ -78,8 +78,8 @@ BEGIN
 		ELSIF(midi_control_temp = "1010001") then -- setting LFO frequency -- CHANNEL 11
 			LFO_freq <= midi_control_data_temp;
 
---		ELSIF(midi_control_temp = "XXXXXXX") then -- setting LFO max velocity
---			LFO_max <= midi_control_data_temp;
+		ELSIF(midi_control_temp = "1011011") then -- setting LFO Amplitude -- CHANNEL 12
+			LFO_max <= midi_control_data_temp;
 
 --		ELSIF(midi_control_temp = "XXXXXXX") then -- setting cut-off
 --			cut_off <= midi_control_data_temp;

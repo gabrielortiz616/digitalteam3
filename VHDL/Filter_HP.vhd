@@ -4,7 +4,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 
 
-entity biquad_ver2 is
+entity highpass is
 		Generic(	WIDTH_filter:INTEGER:=12;
              			Taps:INTEGER:=3;
 				WIDTH_LFO: INTEGER :=7);
@@ -16,17 +16,18 @@ entity biquad_ver2 is
 				Q_in : in STD_LOGIC_VECTOR(6 downto 0);
 				knob_active : IN STD_LOGIC;
 				LFO_active : IN STD_LOGIC;
+				--follow_active : IN STD_LOGIC;
 			FWave : out  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0);
-				Filter_from_microA : in STD_LOGIC_VECTOR(31 downto 0);
-				Filter_from_microB : in STD_LOGIC_VECTOR(31 downto 0);
-			Filter_to_micro : out STD_LOGIC_VECTOR(31 downto 0)
+				Filter_from_microA_HP : in STD_LOGIC_VECTOR(31 downto 0);
+				Filter_from_microB_HP : in STD_LOGIC_VECTOR(31 downto 0);
+			Filter_to_micro_HP : out STD_LOGIC_VECTOR(31 downto 0)
 			);
-end biquad_ver2;
+end highpass;
 
 --------------------------------------------------------------------------------
 -- Architecture and formula declaration
 
-architecture arch of biquad_ver2 is
+architecture arch of highpass is
 
 -- v(n) = g*x(n)
 -- y(n) = v(n) + B1*v(n-1) + B2*v(n-2) - a1*y(n-1) - a2*y(n-2)
@@ -66,11 +67,13 @@ process(clk)
 BEGIN
 	if(rising_edge(clk)) then
 		if(LFO_active = '1') then
-			fc <= LFO & "00000"; 		--12 bits are 4096 worthf
+			fc <= LFO & "00000";  -- amount of 0s are 12-WIDTH_LFO  --fc <= STD_LOGIC_VECTOR(unsigned(LFO)/16); 		--12 bits are 4096 worth
 
 		elsif(knob_active = '1') then
 			fc <= knob & "00000";
-		
+
+		elsif(follow_active = '1') then
+			--fc <= ;
 		else
 			fc <= "011111010000"; -- 2000
 		end if;
@@ -97,12 +100,12 @@ end process;
 -- a1 <= -1598;---1957*G;--1599*G;
 -- a2 <= 657;--937*G;--657*G;
 
-B0 <= to_integer(unsigned(Filter_from_microB(11 downto 0)))*G;
-B1 <= 2*B0;
-B2 <= B0;
+B0 <= to_integer(unsigned(Filter_from_microB_HP(11 downto 0)))*G;
+B1 <= -2*B0;
+B2 <= -B0;
 a0 <= 1024*G;
-a1 <= -to_integer(unsigned(Filter_from_microA(11 downto 0)))*G;
-a2 <= to_integer(unsigned(Filter_from_microA(23 downto 12)))*G;
+a1 <= -to_integer(unsigned(Filter_from_microA_HP(11 downto 0)))*G;
+a2 <= to_integer(unsigned(Filter_from_microA_HP(23 downto 12)))*G;
 
 
 -- When simulating check so that they have the correct value
@@ -117,7 +120,7 @@ begin
 			x_S0  <= STD_LOGIC_VECTOR(unsigned(x_IN)-2048);
 			x_S1 <= x_S0;
 			x_S2 <= x_S1;
-			FWave <= y_S0;--STD_LOGIC_VECTOR(signed(y_S0) + 2048); --y_S0(5 downto 0))*63
+			FWave <= y_S0;--STD_LOGIC_VECTOR(signed(y_S0) + 2048);
 			y_S1 <= y_S0;
 			y_S2 <= y_S1;
 		end if;
@@ -125,10 +128,6 @@ begin
 end process sample;
 
 --------------------------------------------------------------------------------
--- Filter calculation of the output
---v0<=to_integer(signed(x_S(0)))*g;
---v1<=to_integer(signed(x_S(1)))*g;
---v2<=to_integer(signed(x_S(2)))*g;
 
 filter: process(clk)
 begin
@@ -138,44 +137,22 @@ begin
 				B0*signed(x_S0) + B1*signed(x_S1) + B2*signed(x_S2)));	-- X part which is x(n)*B0 + x(n-1)*B1 + x(n-2)*B2
       --end if		
 
---		filtered <= STD_LOGIC_VECTOR(unsigned(x_S0)*B0 + unsigned(x_S1)*B1 + unsigned(x_S2)*B2 
---				- unsigned(y_S1)*a1 - unsigned(y_S2)*a2 + a0*4096); -- - a0?
 
 	end if;
 
 end process filter;
 
 
---filtered2 <= STD_LOGIC_VECTOR(signed(filtered) SLL 1);
---y_S0 <= filtered(WIDTH_filter*2-1 downto WIDTH_filter);
-
---y_S0 <= STD_LOGIC_VECTOR(signed(filtered(WIDTH_filter*2-2 downto WIDTH_filter-1)) SLL 1);
-
 filtered2 <= STD_LOGIC_VECTOR(signed(filtered(WIDTH_filter*2-1) & filtered(WIDTH_filter*2-3 downto WIDTH_filter-1)));
 y_S0 <= STD_LOGIC_VECTOR(signed(filtered2) SLL 1);
 
---output: process(filtered)
---begin
 
---        if((signed(filtered(WIDTH_filter*2-1) & filtered(WIDTH_filter*2-3 downto WIDTH_filter-1)) SLL 1) > (1900)) then
---            y_S0 <= "011111001111";
---        elsif((signed(filtered(WIDTH_filter*2-1) & filtered(WIDTH_filter*2-3 downto WIDTH_filter-1)) SLL 1) < (-1900)) then
---            y_S0 <= "100000110000";
---        else
---            y_S0 <= STD_LOGIC_VECTOR(signed(filtered(WIDTH_filter*2-1) & filtered(WIDTH_filter*2-3 downto WIDTH_filter-1)) SLL 1);
---        end if;
---end process output;
-
---y_S0 <= y_S0_temp;
 
 
 end arch;
 
 
 
-
--- One way would to have 1 first-order and then 3 second-orders after
--- G is evenly distributed as 4th sqrt(G)
 
 
 
