@@ -45,7 +45,8 @@ SIGNAL offset_int_temp_prev : STD_LOGIC_VECTOR(4 DOWNTO 0);
 SIGNAL duty_int_temp_prev : STD_LOGIC_VECTOR(6 DOWNTO 0); 
 SIGNAL lfo_out_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
-
+SIGNAL filter_mode_temp : STD_LOGIC_VECTOR(1 DOWNTO 0);
+SIGNAL flag_filter_mode : STD_LOGIC_VECTOR(1 DOWNTO 0);
 
 
 -- Joakim
@@ -140,8 +141,7 @@ COMPONENT biquad_ver2
 		LFO : in STD_LOGIC_VECTOR(6 downto 0);
 		knob : IN STD_LOGIC_VECTOR(6 downto 0);
 		Q_in : in STD_LOGIC_VECTOR(6 downto 0);
-		knob_active : IN STD_LOGIC;
-		LFO_active : IN STD_LOGIC;
+		mode : IN STD_LOGIC_VECTOR(1 downto 0);
 	    FWave : out  STD_LOGIC_VECTOR (11 downto 0);
 		Filter_from_microA : in STD_LOGIC_VECTOR(31 downto 0);
 		Filter_from_microB : in STD_LOGIC_VECTOR(31 downto 0);
@@ -197,7 +197,15 @@ IF rising_edge(clk) THEN
             flag_out <= "01";   --output_temp(23 downto 12) <= osc_out_temp;
         ELSIF from_micro_reg1(2 downto 0) = "010" THEN 
             flag_out <= "10";   --output_temp(23 downto 12) <= osc_out_temp2;
-        END IF;    
+        ELSIF from_micro_reg1(2 downto 0) = "011" THEN 
+                flag_out <= "11";   --output_temp(23 downto 12) <= LFO;            
+        END IF; 
+    ELSIF from_micro_reg0= "00000111"  THEN -- MIDI or LFO on Filter Cutoff frequency
+        IF from_micro_reg1(2 downto 0) = "000" THEN 
+            flag_filter_mode <= "00" ; --filter cutoff midi
+        ELSIF from_micro_reg1(2 downto 0) = "001" THEN 
+            flag_filter_mode <= "01" ;  -- filter cutoff LFO
+        END IF; 		
     END IF;
     
     ------FLAGS ASSESMENT------
@@ -219,11 +227,17 @@ IF rising_edge(clk) THEN
     IF flag_out = "01" THEN 
         output_temp(23 downto 12) <= osc_out_temp1;        
     ELSIF flag_out = "10" THEN 
-        output_temp(23 downto 12) <= osc_out_temp2;    
+        output_temp(23 downto 12) <= osc_out_temp2;  
+    ELSIF flag_out = "11" THEN 
+        output_temp(23 downto 12) <= lfo_out_temp & "00000";            
     ELSE
         output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));   
     END IF;    
-
+    IF flag_filter_mode = "01" THEN 
+        filter_mode_temp <= "01";
+    ELSE
+        filter_mode_temp <= "00";
+    END IF; 
 
 IF offset_int_temp /= offset_int_temp_prev THEN
     to_micro_reg2 <= "000000000000000000000000000" & offset_int_temp;
@@ -271,7 +285,7 @@ OSC_Main1 : OSC_Main
 	port map(midi_note => midi_note,
 		     wave_type => wave_type1,
              duty_cycle => duty_cycle_temp1,
-             offset => "0000000",
+             offset => "1000000",
              offset_integer_out => offset_null,
              clk => clk,
              sample_clk => sample_clk_temp,
@@ -306,12 +320,11 @@ LFO1 : LFO
 biquad_ver2_comp1:biquad_ver2
 port map( 	clk => clk,
         sample_clk => sample_clk_temp,
-	  	x_IN =>  STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1)))),
+	  	x_IN =>  output_temp(23 downto 12),
 		LFO => lfo_out_temp,
 		knob => cut_off_temp,
 		Q_in => Q_temp,
-		knob_active => '1',	-- Will be needed to be set by button
-		LFO_active => '0',	-- Will be needed to be set by button
+		mode => filter_mode_temp,
 	    FWave => FWave_temp,
 		Filter_from_microA => from_micro_reg3,
 		Filter_from_microB => from_micro_reg4,
