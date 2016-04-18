@@ -59,6 +59,7 @@ int main(void) {
 	u8 counter_side_duty2 = 0;
 	u8 counter_side_offset2 = 0;
 	u8 counter_side_output = 0;
+	u8 counter_side_cutoff = 0;
 	u8 counter_vertical = 0;
 	volatile int Delay;
 	u8 flag = 0;
@@ -78,6 +79,7 @@ int main(void) {
 	char out[17];
 	char output_offset[17];
 	char output_duty[17];
+	char cutoff[17];
 	snprintf(wave1, 17, "%s", "Sine            ");
 	snprintf(wave2, 17, "%s", "Sine            ");
 	snprintf(duty1, 17, "%s", "MIDI            ");
@@ -86,6 +88,7 @@ int main(void) {
 	snprintf(out, 17, "%s", "Add              ");
 	snprintf(output_offset, 17, "%s", "Offset:0        ");
 	snprintf(output_duty, 17, "%s", "DutyCycle:50%    ");
+	snprintf(cutoff, 17, "%s", "MIDI            ");
 	*(baseaddr_p + 0) = 0x00000001;
 	*(baseaddr_p + 1) = 0x00000000;
 	*(baseaddr_p + 0) = 0x00000002;
@@ -98,57 +101,56 @@ int main(void) {
 	*(baseaddr_p + 1) = 0x00000000;
 	*(baseaddr_p + 0) = 0x00000006;
 	*(baseaddr_p + 1) = 0x00000000;
+	*(baseaddr_p + 0) = 0x00000007;
+	*(baseaddr_p + 1) = 0x00000000;
 
 	while (1) {
-		
-		
+
 		// 		Filters
-		
+
 		float wp, N, tempb0, tempa1, tempa2;
 		double Q_temp;
-		int b0, a1, a2, A, B, fs, fc, Q, temp1,temp2,temp3;
+		int b0, a0, a1, a2, A, B, fs, fc, Q, temp1, temp2, temp3;
 		long tempin;
 		int filter_type;
 		fs = 40000;
 		filter_type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
-		
-		
+
 		// Read multiplier output from register 1
-		xil_printf("Read : 0x%08x \n\r", *(baseaddr_p+5));
-		tempin = *(baseaddr_p+5);
-		
+		xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 5));
+		tempin = *(baseaddr_p + 5);
+
 		Q = (tempin / 4096);
-		fc = tempin - Q*4096;
-		Q_temp = Q/100;
+		fc = tempin - Q * 4096;
+		Q_temp = Q / 100;
 
 		xil_printf("fc: %d \n\r", fc);
 		xil_printf("Q: %d \n\r", Q);
 		wp = tan(2 * 3.1415926 * fc / (2 * fs));
-		N = 1*1000 / (wp*wp*1000 + (wp*1000*100 / (Q)) + 1000);
+		N = 1 * 1000 / (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
 
-		
-		if(filter_type==1){				// Lowpass
-			tempb0 = N *wp*wp    				* 1024;
+		if (filter_type == 1) {				// Lowpass
+			tempb0 = N * wp * wp * 1024;
 
-			tempa1 = 2*	N*(wp*wp-1)    			* 1024;
-			tempa2 = N*(wp*wp-wp*100/(Q)+1)    	* 1024;
+			tempa1 = 2 * N * (wp * wp - 1) * 1024;
+			tempa2 = N * (wp * wp - wp * 100 / (Q) + 1) * 1024;
 
 			b0 = tempb0;
 
 			a1 = abs(tempa1);
 			a2 = tempa2;
 
-		}
-		else if(filter_type==2){			// Highpass
-			b0 = N								* 1024;
-			
-			a1 = abs(2*N*(wp*wp-1))				* 1024;
-			a2 = N*(wp*wp-wp*100/Q+1)			* 1024;
-			
 			B = b0;
-			
-		}
-		else if(filter_type==3){
+
+		} else if (filter_type == 2) {			// Highpass
+			b0 = N * 1024;
+
+			a1 = abs(2 * N * (wp * wp - 1)) * 1024;
+			a2 = N * (wp * wp - wp * 100 / Q + 1) * 1024;
+
+			B = b0;
+
+		} else if (filter_type == 3) {
 			int fl;
 			int fh;
 			int fo;
@@ -157,66 +159,57 @@ int main(void) {
 			float wpu;
 			float wo2;
 			int BW;
-			
-			if(fc > 1000){
+
+			if (fc > 1000) {
 				fl = fc - 200;
 				fh = fc + 200;
-			}
-			else if(fc > 500){
+			} else if (fc > 500) {
 				fl = fc - 100;
 				fh = fc + 100;
-			}
-			else if(fc > 100){
+			} else if (fc > 100) {
 				fl = fc - 50;
 				fh = fc + 50;
-			}
-			else if(fc > 20){
+			} else if (fc > 20) {
 				fl = fc - 10;
 				fh = fc + 10;
-			}
-			else {
+			} else {
 				fl = fc;
 				fh = fc;
 			}
-			
-			fo = sqrt(fl * fu);
+
+			fo = sqrt(fl * fh);
 			BW = fh - fl;
-			Q = 100*fo/BW;
-			
+			Q = 100 * fo / BW;
+
 			wpl = tan(3.1415926 * fl / fs);
 			wpu = tan(3.1415926 * fh / fs);
 			W = wpu - wpl;
 			wo2 = wpu * wpl;
-			
-			b0 = W								* 1024;
-			
-			a0 = (1 + W + wo2)					* 1024;
-			a1 = (2 * wo2 - 2)					* 1024;
-			a2 = (1 + wo2 - W)					* 1024;
-			
+
+			b0 = W * 1024;
+
+			a0 = (1 + W + wo2) * 1024;
+			a1 = (2 * wo2 - 2) * 1024;
+			a2 = (1 + wo2 - W) * 1024;
+
 			B = b0 + (a0 * 4096);
-			
+
 		}
-		
+
 		A = a1 + (a2 * 4096);
-		
-		*(baseaddr_p+3) = A;
 
-		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p+3));
+		*(baseaddr_p + 3) = A;
 
-		*(baseaddr_p+4) = B;
+		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
 
-		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p+4));
-		
-		
-		
-		
-		
-		
+		*(baseaddr_p + 4) = B;
+
+		xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
+
 		// 		User interface
 
-		if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1) & 0x00000010)
-				!= 0) {
+		if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1) & 0x00000010) //Center button
+		!= 0) {
 			for (Delay = 0; Delay < 1000000; Delay++)
 				;
 			menu = menu + 1;
@@ -243,6 +236,8 @@ int main(void) {
 					kc_LCDPrintString("Offset Osc2:    ", offset2);
 				} else if (counter_vertical == 5) {
 					kc_LCDPrintString("Output Signal:  ", out);
+				} else if (counter_vertical == 6) {
+					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
 				}
 				run = 0;
 			}
@@ -251,7 +246,7 @@ int main(void) {
 				counter_vertical = counter_vertical + 1;
 				for (Delay = 0; Delay < 1000000; Delay++)
 					;
-				if (counter_vertical == 6) {
+				if (counter_vertical == 7) {
 					counter_vertical = 0;
 				}
 				if (counter_vertical == 0) {
@@ -266,6 +261,8 @@ int main(void) {
 					kc_LCDPrintString("Offset Osc2:    ", offset2);
 				} else if (counter_vertical == 5) {
 					kc_LCDPrintString("Output Signal:  ", out);
+				} else if (counter_vertical == 6) {
+					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
 				}
 			} else if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
 					& 0x00000001) != 0) {
@@ -289,6 +286,8 @@ int main(void) {
 					kc_LCDPrintString("Offset Osc2:    ", offset2);
 				} else if (counter_vertical == 5) {
 					kc_LCDPrintString("Output Signal:  ", out);
+				} else if (counter_vertical == 6) {
+					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
 				}
 			}
 
@@ -530,7 +529,7 @@ int main(void) {
 					counter_side_output = counter_side_output + 1;
 					for (Delay = 0; Delay < 900000; Delay++)
 						;
-					if (counter_side_output == 4) {
+					if (counter_side_output == 5) {
 						counter_side_output = 0;
 					}
 					flag = 1;
@@ -541,7 +540,7 @@ int main(void) {
 						;
 					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 					if (counter_side_output == 0) {
-						counter_side_output = 3;
+						counter_side_output = 4;
 					} else {
 						counter_side_output = counter_side_output - 1;
 					}
@@ -567,6 +566,51 @@ int main(void) {
 						*(baseaddr_p + 0) = 0x00000006;
 						*(baseaddr_p + 1) = 0x00000002;
 						snprintf(out, 17, "%s", "Osc2             ");
+					} else if (counter_side_output == 4) {
+						kc_LCDPrintString("Output Signal:  ",
+								"LFO             ");
+						*(baseaddr_p + 0) = 0x00000006;
+						*(baseaddr_p + 1) = 0x00000003;
+						snprintf(out, 17, "%s", "LFO              ");
+					}
+				}
+			} else if (counter_vertical == 6) {  //FilterCutoff
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000004) != 0) {
+					counter_side_cutoff = counter_side_cutoff + 1;
+					for (Delay = 0; Delay < 900000; Delay++)
+						;
+					if (counter_side_cutoff == 3) {
+						counter_side_cutoff = 0;
+					}
+					flag = 1;
+				}
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000008) != 0) {
+					for (Delay = 0; Delay < 900000; Delay++)
+						;
+					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
+					if (counter_side_cutoff == 0) {
+						counter_side_cutoff = 2;
+					} else {
+						counter_side_cutoff = counter_side_cutoff - 1;
+					}
+					flag = 1;
+				}
+				if (flag == 1) {
+					flag = 0;
+					if (counter_side_cutoff == 1) {
+						kc_LCDPrintString("Filter Cutoff:  ",
+								"MIDI            ");
+						*(baseaddr_p + 0) = 0x00000007;
+						*(baseaddr_p + 1) = 0x00000000;
+						snprintf(cutoff, 17, "%s", "MIDI             ");
+					} else if (counter_side_cutoff == 2) {
+						kc_LCDPrintString("Filter Cutoff:  ",
+								"LFO             ");
+						*(baseaddr_p + 0) = 0x00000007;
+						*(baseaddr_p + 1) = 0x00000001;
+						snprintf(cutoff, 17, "%s", "LFO              ");
 					}
 				}
 			}
@@ -579,9 +623,9 @@ int main(void) {
 				} else {
 					in_flag = 0;
 				}
-			}else if (runa==1) {
+			} else if (runa == 1) {
 				kc_LCDPrintString(output_offset, output_duty);
-				runa=0;
+				runa = 0;
 			}
 			if (in_flag == 1) {
 				if ((duty_ev != *(baseaddr_p + 2)) || (runa == 1)) {

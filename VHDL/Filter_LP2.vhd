@@ -14,8 +14,7 @@ entity biquad_ver2 is
 				LFO : in STD_LOGIC_VECTOR(WIDTH_LFO-1 downto 0);
 				knob : IN STD_LOGIC_VECTOR(6 downto 0);
 				Q_in : in STD_LOGIC_VECTOR(6 downto 0);
-				knob_active : IN STD_LOGIC;
-				LFO_active : IN STD_LOGIC;
+		mode : IN STD_LOGIC_VECTOR(1 downto 0);
 			FWave : out  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0);
 				Filter_from_microA : in STD_LOGIC_VECTOR(31 downto 0);
 				Filter_from_microB : in STD_LOGIC_VECTOR(31 downto 0);
@@ -65,10 +64,10 @@ begin
 process(clk)
 BEGIN
 	if(rising_edge(clk)) then
-		if(LFO_active = '1') then
+		if(mode = "01") then
 			fc <= LFO & "00000"; 		--12 bits are 4096 worthf
 
-		elsif(knob_active = '1') then
+		elsif(mode = "00") then
 			fc <= knob & "00000";
 		
 		else
