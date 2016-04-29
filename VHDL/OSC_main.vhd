@@ -5,12 +5,14 @@ USE ieee.numeric_std.ALL;
 
 ENTITY OSC_Main is
       PORT(midi_note:IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+           midi_pitch:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
 		   wave_type:IN STD_LOGIC_VECTOR(2 DOWNTO 0);
            duty_cycle:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
            offset:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
            offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);
            duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);
            clk : IN STD_LOGIC;
+           pitch_on_in   : in  std_logic;	
            sample_clk : IN STD_LOGIC;
 		   reset:IN STD_LOGIC;
            oscout:OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
@@ -19,6 +21,9 @@ END OSC_Main;
 ARCHITECTURE arch_OSC_Main OF OSC_Main IS
 SIGNAL out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL increment_temp : STD_LOGIC_VECTOR(20 DOWNTO 0);
+SIGNAL increment_temp1 : STD_LOGIC_VECTOR(41 DOWNTO 0);
+SIGNAL increment_temp2 : STD_LOGIC_VECTOR(41 DOWNTO 0);
+SIGNAL increment_midi : STD_LOGIC_VECTOR(20 DOWNTO 0);
 SIGNAL counter_size_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL Q_temp24 : STD_LOGIC_VECTOR(20 DOWNTO 0);
 SIGNAL Q_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -33,7 +38,8 @@ SIGNAL square_counter_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL Square_Reg_Q_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 SIGNAL comp_out_temp : STD_LOGIC;
 SIGNAL midi_note_temp : STD_LOGIC_VECTOR(7 DOWNTO 0);
-
+SIGNAL midi_pitch_temp : STD_LOGIC_VECTOR(7 DOWNTO 0);
+SIGNAL pitch_inc_temp : STD_LOGIC_VECTOR(20 DOWNTO 0);
 
 COMPONENT MIDI_Count_LUT
       PORT(address : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -45,6 +51,10 @@ COMPONENT MIDI_Increment_LUT
            data : OUT STD_LOGIC_VECTOR(20 DOWNTO 0));  
 END COMPONENT;
 
+COMPONENT Pitch_LUT
+ port ( address : in std_logic_vector(7 downto 0);
+    data : out std_logic_vector(20 downto 0));
+ end COMPONENT Pitch_LUT;
 COMPONENT Offset_LUT
     Port ( clk : IN STD_LOGIC;
            offset_in : in STD_LOGIC_VECTOR (6 downto 0);
@@ -141,13 +151,17 @@ BEGIN
 MIDI_Increment_LUT1 : MIDI_Increment_LUT
    port map(
 		address => midi_note_temp,
-      data => increment_temp);
+      data => increment_midi);
 
 MIDI_Count_LUT1 : MIDI_Count_LUT
    port map(
 		address => midi_note_temp, 
         data => counter_size_temp);
 
+Pitch_LUT1 : Pitch_LUT
+   port map(
+		address => '0' & midi_pitch,
+        data => pitch_inc_temp);
 Offset_LUT1 : Offset_LUT
    port map(
         clk => clk,
@@ -235,5 +249,17 @@ port map(
     sample_clk  => sample_clk,
     random_num  => mux_in_whitenoise_temp);   --output vector            
 
+PROCESS(clk)
+BEGIN
+IF rising_edge(clk) THEN
+    IF pitch_on_in = '1' then
+        increment_temp1 <= STD_LOGIC_VECTOR(unsigned(increment_midi)*unsigned(pitch_inc_temp));
+        increment_temp2 <= STD_LOGIC_VECTOR(unsigned(increment_temp1) srl 12);
+        increment_temp <= increment_temp2(20 downto 0);
+    else
+        increment_temp <= increment_midi;
+    END IF;         
+END IF; 
+END PROCESS;
 
 END arch_OSC_Main;
