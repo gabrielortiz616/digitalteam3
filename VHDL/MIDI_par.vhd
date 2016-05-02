@@ -12,6 +12,8 @@ entity MIDI_par is
 				OUT STD_LOGIC_VECTOR(6 downto 0);
 				midi_ch   : out std_logic_vector(3 downto 0);
 				note_on : OUT STD_LOGIC;
+                pitch_on_out   : out  std_logic;				
+				midi_pitch : OUT STD_LOGIC_VECTOR(6 downto 0);                
 				midi_note : OUT STD_LOGIC_VECTOR(7 downto 0)
 				);
 end MIDI_par;
@@ -27,9 +29,11 @@ COMPONENT midi is port
        CLK: IN STD_LOGIC;
        midi_in   : in  std_logic;
        note_on_out   : out  std_logic;
+       pitch_on_out   : out  std_logic; 
        midi_ch   : out std_logic_vector(3 downto 0);
        midi_control   : out std_logic_vector(6 downto 0);
        midi_control_data   : out std_logic_vector(6 downto 0);
+       midi_pitch : OUT STD_LOGIC_VECTOR(6 downto 0); 
        midi_note_out : out  std_logic_vector(7 downto 0)
        );
 end COMPONENT;
@@ -49,6 +53,8 @@ midi1 : midi
                midi_control => midi_control_temp,
                midi_control_data => midi_control_data_temp,
                note_on_out => note_on,
+               pitch_on_out => pitch_on_out,             
+               midi_pitch => midi_pitch,
                midi_note_out => midi_note
                );
 

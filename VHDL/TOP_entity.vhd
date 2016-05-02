@@ -30,8 +30,10 @@ SIGNAL midi_note : STD_LOGIC_VECTOR(7 DOWNTO 0);
 SIGNAL wave_type1 : STD_LOGIC_VECTOR(2 downto 0);
 SIGNAL wave_type2 : STD_LOGIC_VECTOR(2 downto 0);
 SIGNAL note_on_temp : STD_LOGIC;
+SIGNAL midi_pitch_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL rate_temp : STD_LOGIC;
 SIGNAL duty_cycle_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0) := "1000010"; 
+SIGNAL pitch_on_out_temp : STD_LOGIC;
 SIGNAL duty_cycle_temp2 : STD_LOGIC_VECTOR(6 DOWNTO 0) := "1000010"; 
 SIGNAL duty_cycle_midi : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL offset_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);  
@@ -98,6 +100,8 @@ COMPONENT OSC_Main
            offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);  
            duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);         
            clk : IN STD_LOGIC;
+           midi_pitch:IN STD_LOGIC_VECTOR(6 DOWNTO 0);           
+           pitch_on_in   : in  std_logic;     
            sample_clk : IN STD_LOGIC;
 		   reset:IN STD_LOGIC;
            oscout:OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
@@ -157,6 +161,8 @@ COMPONENT MIDI_par is
         OUT STD_LOGIC_VECTOR(6 downto 0);
         midi_ch   : out std_logic_vector(3 downto 0);
         note_on : OUT STD_LOGIC;
+        pitch_on_out   : out  std_logic;	 
+		midi_pitch : OUT STD_LOGIC_VECTOR(6 downto 0);             
         midi_note : OUT STD_LOGIC_VECTOR(7 downto 0)
         );
 end COMPONENT;
@@ -273,7 +279,9 @@ MIDI_par_comp : MIDI_par
         osc_offset => offset_midi,
         duty_cycle => duty_cycle_midi,
         midi_ch => midi_ch_temp,
-        note_on => note_on_temp
+        note_on => note_on_temp,
+        pitch_on_out => pitch_on_out_temp,
+        midi_pitch => midi_pitch_temp    
         );
 
 --GPIO_LED_0 <= duty_cycle_temp(0);
@@ -288,6 +296,8 @@ OSC_Main1 : OSC_Main
              offset => "1000000",
              offset_integer_out => offset_null,
              clk => clk,
+             midi_pitch => midi_pitch_temp,    
+             pitch_on_in => pitch_on_out_temp,   
              sample_clk => sample_clk_temp,
 		     reset => RESET,
              oscout => osc_out_temp1);
@@ -300,6 +310,8 @@ OSC_Main2 : OSC_Main
             offset_integer_out => offset_int_temp,
             duty_integer_out => duty_int_temp,
             clk => clk,
+             midi_pitch => midi_pitch_temp,    
+            pitch_on_in => pitch_on_out_temp,    
             sample_clk => sample_clk_temp,
 		    reset => RESET,
             oscout => osc_out_temp2);
