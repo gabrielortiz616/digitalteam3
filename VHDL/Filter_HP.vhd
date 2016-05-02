@@ -100,7 +100,7 @@ end process;
 
 B0 <= to_integer(unsigned(Filter_from_microB_HP(11 downto 0)))*G;
 B1 <= -2*B0;
-B2 <= -B0;
+B2 <= B0;
 a0 <= 1024*G;
 a1 <= -to_integer(unsigned(Filter_from_microA_HP(11 downto 0)))*G;
 a2 <= to_integer(unsigned(Filter_from_microA_HP(23 downto 12)))*G;

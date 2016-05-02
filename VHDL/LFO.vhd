@@ -58,7 +58,7 @@ counter_LFO_comp:
 COMPONENT counter
          PORT MAP(clk=>clk,
          sample_clk => sample_clk,
-	 	  count_max => "000010011101",
+	 	  count_max => time_S,
 		  count_duty => "000000000001",
 		  clk_out => count);
 
