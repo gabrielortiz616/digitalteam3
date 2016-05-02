@@ -14,9 +14,7 @@ entity highpass is
 				LFO : in STD_LOGIC_VECTOR(WIDTH_LFO-1 downto 0);
 				knob : IN STD_LOGIC_VECTOR(6 downto 0);
 				Q_in : in STD_LOGIC_VECTOR(6 downto 0);
-				knob_active : IN STD_LOGIC;
-				LFO_active : IN STD_LOGIC;
-				--follow_active : IN STD_LOGIC;
+				mode :in STD_LOGIC_VECTOR(1 downto 0);
 			FWave : out  STD_LOGIC_VECTOR (WIDTH_filter-1 downto 0);
 				Filter_from_microA_HP : in STD_LOGIC_VECTOR(31 downto 0);
 				Filter_from_microB_HP : in STD_LOGIC_VECTOR(31 downto 0);
@@ -66,19 +64,19 @@ begin
 process(clk)
 BEGIN
 	if(rising_edge(clk)) then
-		if(LFO_active = '1') then
+		if(mode = "01") then
 			fc <= LFO & "00000";  -- amount of 0s are 12-WIDTH_LFO  --fc <= STD_LOGIC_VECTOR(unsigned(LFO)/16); 		--12 bits are 4096 worth
 
-		elsif(knob_active = '1') then
+		elsif(mode = "00") then
 			fc <= knob & "00000";
 
-		elsif(follow_active = '1') then
+		elsif(mode = "10") then
 			--fc <= ;
 		else
 			fc <= "011111010000"; -- 2000
 		end if;
-		Filter_to_micro(11 downto 0) <= fc;
-		Filter_to_micro(18 downto 12) <= Q_in ;
+		Filter_to_micro_HP(11 downto 0) <= fc;
+		Filter_to_micro_HP(18 downto 12) <= Q_in ;
 		
 	end if;
 end process;
