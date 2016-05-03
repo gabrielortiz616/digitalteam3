@@ -13,9 +13,18 @@ ENTITY TOP_Entity is
         from_micro_reg0 : IN STD_LOGIC_VECTOR(7 downto 0);
         from_micro_reg1 : IN STD_LOGIC_VECTOR(7 downto 0);
         to_micro_reg2 : OUT STD_LOGIC_VECTOR(31 downto 0);
-        from_micro_reg3 : IN STD_LOGIC_VECTOR(31 downto 0);
-        from_micro_reg4 : IN STD_LOGIC_VECTOR(31 downto 0);
-        to_micro_reg5 : OUT STD_LOGIC_VECTOR(31 downto 0);
+        from_micro_reg3 : IN STD_LOGIC_VECTOR(31 downto 0); -- LP
+        from_micro_reg4 : IN STD_LOGIC_VECTOR(31 downto 0); -- LP
+        to_micro_reg5 : OUT STD_LOGIC_VECTOR(31 downto 0);  -- LP
+        from_micro_reg6 : IN STD_LOGIC_VECTOR(31 downto 0); -- HP
+        from_micro_reg7 : IN STD_LOGIC_VECTOR(31 downto 0); -- HP
+        to_micro_reg8 : OUT STD_LOGIC_VECTOR(31 downto 0);  -- HP
+        from_micro_reg9 : IN STD_LOGIC_VECTOR(31 downto 0); -- BP
+        from_micro_reg10 : IN STD_LOGIC_VECTOR(31 downto 0);-- BP
+        to_micro_reg11 : OUT STD_LOGIC_VECTOR(31 downto 0); -- BP
+        from_micro_reg12 : IN STD_LOGIC_VECTOR(31 downto 0);-- LFO
+        to_micro_reg13 : OUT STD_LOGIC_VECTOR(31 downto 0);  -- LFO
+        to_micro_reg14 : OUT STD_LOGIC_VECTOR(31 downto 0);
         SPI : out STD_LOGIC_VECTOR(3 downto 0));
 END TOP_Entity;
 
@@ -53,7 +62,7 @@ SIGNAL flag_filter_mode : STD_LOGIC_VECTOR(1 DOWNTO 0);
 
 -- Joakim
 
-SIGNAL FWave_temp, EWave_temp, Wave_OUT_temp : STD_LOGIC_VECTOR(11 downto 0);
+SIGNAL FWave_temp,FWave_temp_LP,FWave_temp_HP, EWave_temp, Wave_OUT_temp : STD_LOGIC_VECTOR(11 downto 0);
 SIGNAL Q_temp : STD_LOGIC_VECTOR(6 downto 0);
 SIGNAL time_sustain_temp, time_release_temp, time_attack_temp, cut_off_temp,
 	LFO_max_temp, LFO_freq_temp, velocity_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000";
@@ -108,12 +117,15 @@ COMPONENT OSC_Main
 END COMPONENT;
 
 COMPONENT LFO
- port(clk:in std_logic;
-      sample_clk : IN STD_LOGIC;
-      rate_out : out std_logic;  
-      LFO_gain_main_in: in std_logic_vector(6 downto 0);      
-      LFO_freq_main_in : in std_logic_vector(6 downto 0);
-	  lfo_out : out std_logic_vector(6 downto 0));
+ Port ( 
+				clk, sample_clk : in  STD_LOGIC;
+			LFO : OUT STD_LOGIC_VECTOR(6 downto 0);
+				LFO_depth : IN STD_LOGIC_VECTOR(6 downto 0);
+				LFO_frequency : in STD_LOGIC_VECTOR(6 downto 0);
+				mode : IN STD_LOGIC_VECTOR(1 downto 0);
+				LFO_from_micro : in STD_LOGIC_VECTOR(31 downto 0);
+			LFO_to_micro : out STD_LOGIC_VECTOR(31 downto 0)
+			);
 end COMPONENT;
 
 COMPONENT DAC
@@ -150,6 +162,37 @@ COMPONENT biquad_ver2
 		Filter_from_microA : in STD_LOGIC_VECTOR(31 downto 0);
 		Filter_from_microB : in STD_LOGIC_VECTOR(31 downto 0);
 	    Filter_to_micro : out STD_LOGIC_VECTOR(31 downto 0));
+END COMPONENT;
+
+COMPONENT highpass
+   port(
+		clk : in  STD_LOGIC;
+	    sample_clk  : in  STD_LOGIC;
+		x_IN : in  STD_LOGIC_VECTOR (11 downto 0);
+		LFO : in STD_LOGIC_VECTOR(6 downto 0);
+		knob : IN STD_LOGIC_VECTOR(6 downto 0);
+		Q_in : in STD_LOGIC_VECTOR(6 downto 0);
+		mode : IN STD_LOGIC_VECTOR(1 downto 0);
+	    FWave : out  STD_LOGIC_VECTOR (11 downto 0);
+		Filter_from_microA_HP : in STD_LOGIC_VECTOR(31 downto 0);
+		Filter_from_microB_HP : in STD_LOGIC_VECTOR(31 downto 0);
+	    Filter_to_micro_HP : out STD_LOGIC_VECTOR(31 downto 0));
+END COMPONENT;
+
+
+COMPONENT bandpass
+   port(
+		clk : in  STD_LOGIC;
+	    sample_clk  : in  STD_LOGIC;
+		x_IN : in  STD_LOGIC_VECTOR (11 downto 0);
+		LFO : in STD_LOGIC_VECTOR(6 downto 0);
+		knob : IN STD_LOGIC_VECTOR(6 downto 0);
+		Q_in : in STD_LOGIC_VECTOR(6 downto 0);
+		mode : IN STD_LOGIC_VECTOR(1 downto 0);
+	    FWave : out  STD_LOGIC_VECTOR (11 downto 0);
+		Filter_from_microA_BP : in STD_LOGIC_VECTOR(31 downto 0);
+		Filter_from_microB_BP : in STD_LOGIC_VECTOR(31 downto 0);
+	    Filter_to_micro_BP : out STD_LOGIC_VECTOR(31 downto 0));
 END COMPONENT;
 
 COMPONENT MIDI_par is
@@ -319,10 +362,12 @@ OSC_Main2 : OSC_Main
 LFO1 : LFO
  port map (clk => clk,
            sample_clk => sample_clk_temp, 
-           rate_out => rate_temp,
-           LFO_gain_main_in => LFO_max_temp,
-           LFO_freq_main_in => LFO_freq_temp,
-	       lfo_out=> lfo_out_temp);
+           mode => "00",
+           LFO_depth => LFO_max_temp,
+           LFO_frequency => LFO_freq_temp,
+           LFO_to_micro => to_micro_reg13,
+           LFO_from_micro => from_micro_reg12,
+	       LFO=> lfo_out_temp);
 
 
 
@@ -337,16 +382,46 @@ port map( 	clk => clk,
 		knob => cut_off_temp,
 		Q_in => Q_temp,
 		mode => filter_mode_temp,
-	    FWave => FWave_temp,
+	    FWave => FWave_temp_LP,
 		Filter_from_microA => from_micro_reg3,
 		Filter_from_microB => from_micro_reg4,
 	    Filter_to_micro => to_micro_reg5);
 	
+	
+	highpass_comp:highpass
+    port map(     clk => clk,
+            sample_clk => sample_clk_temp,
+              x_IN =>  output_temp(23 downto 12),
+            LFO => lfo_out_temp,
+            knob => cut_off_temp,
+            Q_in => Q_temp,
+            mode => filter_mode_temp,
+            FWave => FWave_temp_HP,
+            Filter_from_microA_HP => from_micro_reg6,
+            Filter_from_microB_HP => from_micro_reg7,
+            Filter_to_micro_HP => to_micro_reg8);
+    
+    
+--    bandpass_comp:bandpass
+--    port map(     clk => clk,
+--            sample_clk => sample_clk_temp,
+--              x_IN =>  osc_out_temp,
+--            LFO => lfo_out_temp,
+--            knob => cut_off_temp,
+--            Q_in => Q_temp,
+--            mode => "00",
+--            FWave => FWave_temp,
+--            Filter_from_microA_BP => temporary,
+--            Filter_from_microB_BP => temporary,
+--            Filter_to_micro_BP => temporary);
 
 --time_attack_temp  <= "0010000";	--64
 --time_sustain_temp <= "0010000";
 --time_release_temp <= "0010000";
 
+WITH from_micro_reg9 SELECT
+    FWave_temp <= FWave_temp_LP WHEN "00000000000000000000000000000000",
+                  FWave_temp_HP WHEN OTHERS;
 
 envelope_comp1: envelope
   port map(

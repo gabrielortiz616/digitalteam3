@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
@@ -16,11 +17,10 @@ entity myip_v1_0 is
 		C_S00_AXI_ADDR_WIDTH	: integer	:= 6
 	);
 	port (
-		-- Users to add ports here    
-       RESET : IN STD_LOGIC;
-       --LED
-       SPI : out STD_LOGIC_VECTOR(3 downto 0);
-       midi_in : in STD_LOGIC;
+		-- Users to add ports here
+        RESET : IN STD_LOGIC;
+        SPI : out STD_LOGIC_VECTOR(3 downto 0);
+        midi_in : in STD_LOGIC;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -59,9 +59,6 @@ architecture arch_imp of myip_v1_0 is
 		C_S_AXI_ADDR_WIDTH	: integer	:= 6
 		);
 		port (
-		RESET : IN STD_LOGIC;
-        SPI : out STD_LOGIC_VECTOR(3 downto 0);
-        midi_in : in STD_LOGIC;
 		S_AXI_ACLK	: in std_logic;
 		S_AXI_ARESETN	: in std_logic;
 		S_AXI_AWADDR	: in std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
@@ -82,7 +79,11 @@ architecture arch_imp of myip_v1_0 is
 		S_AXI_RDATA	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		S_AXI_RRESP	: out std_logic_vector(1 downto 0);
 		S_AXI_RVALID	: out std_logic;
-		S_AXI_RREADY	: in std_logic
+		S_AXI_RREADY	: in std_logic;
+		RESET : IN STD_LOGIC;
+               --LED
+        SPI : out STD_LOGIC_VECTOR(3 downto 0);
+        midi_in : in STD_LOGIC
 		);
 	end component myip_v1_0_S00_AXI;
 
@@ -116,12 +117,13 @@ myip_v1_0_S00_AXI_inst : myip_v1_0_S00_AXI
 		S_AXI_RRESP	=> s00_axi_rresp,
 		S_AXI_RVALID	=> s00_axi_rvalid,
 		S_AXI_RREADY	=> s00_axi_rready,
-       RESET => RESET,
-       midi_in => midi_in,
-       SPI => SPI);
+		RESET => RESET,
+        midi_in => midi_in,
+        SPI => SPI
+	);
 
 	-- Add user logic here
-
+    
 	-- User logic ends
 
 end arch_imp;
