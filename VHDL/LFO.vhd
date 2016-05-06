@@ -42,13 +42,14 @@ BEGIN
 	if(rising_edge(clk)) then
 		LFO_to_micro(6 downto 0) <= LFO_frequency;
 		LFO_to_micro(13 downto 7) <= LFO_depth;
-
-		if(mode = "10") then				-- sawtooth
-			time_S <= STD_LOGIC_VECTOR((unsigned(LFO_from_micro(11 downto 0))) SLL 1);
-
-		else						-- triangle and square
-			time_S <= LFO_from_micro(11 downto 0);
-
+        if(count_L = "000000000000") then
+            if(mode = "10") then				-- sawtooth
+                time_S <= STD_LOGIC_VECTOR((unsigned(LFO_from_micro(11 downto 0))) SLL 1);
+        
+            else						-- triangle and square
+                time_S <= LFO_from_micro(11 downto 0);
+        
+            end if;
 		end if;
 	end if;
 end process;
@@ -84,6 +85,7 @@ BEGIN
 					else				-- triangle and square
 						if(count_L = "000000000001") then	-- change to rise
 							gain <='0';
+							count_L <= "000000000000";
 
 						end if;
 					end if;

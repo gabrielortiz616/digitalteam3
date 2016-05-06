@@ -119,31 +119,45 @@ int main(void) {
 	float wpu;
 	float wo2;
 	int BW;
+	int fcactive;
+	int Qactive;
+	int LFO_freq_active;
+	int LFO_depth_active;
+	long filteractive;
+
 
 	// LFO variables
 
 	long LFO_in;
 	float LFO_depth, LFO_frequency;
 	int LFO_out;
+	long LFOactive;
 
 	while (1) {
 
 		// 		Filters
 
 		fs = 40000;
-		filter_type = 2;	// 1=lowpass	2=highpass	3=bandpass	4=follow
+		filter_type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
 
 
 
 		if (filter_type == 1) {				// Lowpass
 
-			// Read multiplier output from register 1
-			xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 5));
-			tempin = *(baseaddr_p + 5);
 
+
+			// Read multiplier output from register 1
+			//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 5));
+
+			if(tempin !=*(baseaddr_p + 5)){
+
+
+			tempin = *(baseaddr_p + 5);
 			Q = (tempin / 4096);
-			fc = tempin - Q * 4096;
+			fc = tempin - Q * 4096 + 10;
 			Q_temp = Q / 100;
+
+			filteractive = tempin;
 
 			xil_printf("fc: %d \n\r", fc);
 			xil_printf("Q: %d \n\r", Q);
@@ -167,15 +181,22 @@ int main(void) {
 
 			A = a1 + (a2 * 4096);
 			*(baseaddr_p + 3) = A;
-			xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
 			*(baseaddr_p + 4) = B;
-			xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
 
+			for (Delay = 0; Delay < 50000; Delay++)
+											;
+
+			}
 		} else if (filter_type == 2) {			// Highpass
 
 
 			// Read multiplier output from register 1
-			xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 8));
+			//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 8));
+
+			if(tempin != *(baseaddr_p + 8)){
+
 			tempin = *(baseaddr_p + 8);
 
 			Q = (tempin / 4096);
@@ -195,20 +216,27 @@ int main(void) {
 			a1 = abs(2 * N * (wp * wp - 1)) * 1024;
 			a2 = N * (wp * wp - wp * 100 / Q + 1) * 1024;
 
-			b0 = 967;
-			a1=1931;
-			a2=914;
+			//b0 = 967;
+			//a1=1931;
+			//a2=914;
 
 			B = b0;
 
 			A = a1 + (a2 * 4096);
+
+
+
 			*(baseaddr_p + 6) = A;
-			xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 6));
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 6));
 			*(baseaddr_p + 7) = B;
-			xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 7));
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 7));
 
 			*(baseaddr_p + 9) = B;
 
+			for (Delay = 0; Delay < 200000; Delay++)
+												;
+
+			}
 //		} else if (filter_type == 3) {
 //
 //
@@ -276,17 +304,20 @@ int main(void) {
 
 
 		// LFO
-
-		xil_printf("Read LFO: 0x%08x \n\r", *(baseaddr_p + 13));
+		//xil_printf("Read LFO: 0x%08x \n\r", *(baseaddr_p + 13));
 		LFO_in = *(baseaddr_p + 13);
 
+		if(LFO_in != LFOactive){
+
+		LFOactive = LFO_in;
+
 		LFO_depth = (LFO_in / 128);
-		LFO_frequency = (LFO_in - LFO_depth * 128)*100/635;
-		xil_printf("LFO: %d \n\r", LFO_in);
+		LFO_frequency = (LFO_in - LFO_depth * 128)*100/450;
+		xil_printf("LFO: %d \n\r", LFO_frequency);
 		LFO_out = fs / (2*LFO_frequency*LFO_depth);
 
 		*(baseaddr_p + 12) = LFO_out;
-
+		}
 
 
 		// 		User interface
