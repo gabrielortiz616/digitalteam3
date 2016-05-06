@@ -25,6 +25,10 @@ ENTITY TOP_Entity is
         from_micro_reg12 : IN STD_LOGIC_VECTOR(31 downto 0);-- LFO
         to_micro_reg13 : OUT STD_LOGIC_VECTOR(31 downto 0);  -- LFO
         to_micro_reg14 : OUT STD_LOGIC_VECTOR(31 downto 0);
+		WS_out : out STD_LOGIC; --J3 4
+	    SD_out : out std_logic; --J3 6
+	    I2S_clk : out std_logic; --J3 8
+	    I2S_right : out std_logic; --J3 10
         SPI : out STD_LOGIC_VECTOR(3 downto 0));
 END TOP_Entity;
 
@@ -149,6 +153,9 @@ COMPONENT envelope
         EWave : OUT STD_LOGIC_VECTOR(11 downto 0));
 END COMPONENT;
 
+
+
+
 COMPONENT biquad_ver2
    port(
 		clk : in  STD_LOGIC;
@@ -209,6 +216,17 @@ COMPONENT MIDI_par is
         midi_note : OUT STD_LOGIC_VECTOR(7 downto 0)
         );
 end COMPONENT;
+
+COMPONENT IIS_master is
+	generic(N: integer := 12); -- Number of registers used.
+    port(
+        clk, reset: IN STD_LOGIC;
+        parallel_right_data, parallel_left_data: IN STD_LOGIC_VECTOR (0 to N-1);             -- Left and right channel data
+        serial_clk_out, word_select, serial_data, right_channel_indicator: OUT STD_LOGIC
+    );
+end COMPONENT;
+
+
 -----END COMPONENTS DEFINITION----------
 
 
@@ -368,9 +386,6 @@ LFO1 : LFO
            LFO_to_micro => to_micro_reg13,
            LFO_from_micro => from_micro_reg12,
 	       LFO=> lfo_out_temp);
-
-
-
 --Q_temp <= "0010110";
 --cut_off_temp <= "0111110";
 
@@ -446,34 +461,16 @@ DAC1 : DAC
              CS => SPI(3));
 
 
---FMC1_HPC_HA10_N <= midi_control_data_temp(0); --4
---FMC1_HPC_HA11_P <= note_on_temp; --6
-----FMC1_HPC_HA11_N <= midi_control_data_temp(2); -- 8
---FMC1_HPC_HA12_P <= midi_control_data_temp(3); --10
---FMC1_HPC_HA12_N <= midi_control_data_temp(4); --12
---FMC1_HPC_HA13_P <= midi_control_data_temp(5); --14
---FMC1_HPC_HA13_N <= midi_control_data_temp(6); --16
---FMC1_HPC_HA14_P <= midi_in; --18
---PROCESS(clk)
---BEGIN
---IF control_temp = "0000" then
--- time_attack_temp <= midi_control_data_temp;
---END IF;
---IF control_temp = "0001" then
--- time_sustain_temp <= midi_control_data_temp;
---END IF;
---IF control_temp = "0010" then
--- time_release_temp <= midi_control_data_temp;
---END IF;
---IF control_temp = "0011" then
---time_attack_temp <= "0100000";	--64
---time_sustain_temp <= "0100000";
---time_release_temp <= "0100000";
---GPIO_LED_0 <= time_attack_temp(0);
---GPIO_LED_1 <= time_attack_temp(1);
---GPIO_LED_2 <= time_attack_temp(2);
---GPIO_LED_3 <= time_attack_temp(3);
---END IF;
---END PROCESS;
-
+IIS_master1 : IIS_master
+ port map(
+	    parallel_right_data => output_temp(23 downto 12),
+	    parallel_left_data => output_temp(23 downto 12),
+        word_select=>WS_out, 
+        reset => RESET, 
+        clk => clk,
+        serial_clk_out => I2S_clk,
+        right_channel_indicator => I2S_right,     
+        serial_data=> SD_out);	
+		
+		
 END arch_TOP_Entity;
