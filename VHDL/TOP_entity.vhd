@@ -25,16 +25,22 @@ ENTITY TOP_Entity is
         from_micro_reg12 : IN STD_LOGIC_VECTOR(31 downto 0);-- LFO
         to_micro_reg13 : OUT STD_LOGIC_VECTOR(31 downto 0);  -- LFO
         to_micro_reg14 : OUT STD_LOGIC_VECTOR(31 downto 0);
-		WS_out : out STD_LOGIC; --J3 4
-	    SD_out : out std_logic; --J3 6
-	    I2S_clk : out std_logic; --J3 8
-	    I2S_right : out std_logic; --J3 10
+        I2S : out STD_LOGIC_VECTOR(3 downto 0);
+--		WS_out : out STD_LOGIC; --J3 4
+--	    SD_out : out std_logic; --J3 6
+--	    I2S_clk : out std_logic; --J3 8
+--	    I2S_right : out std_logic; --J3 10
+        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0); --12 14 16 18 20
+        ADC_SPI_IN : in STD_LOGIC;
         SPI : out STD_LOGIC_VECTOR(3 downto 0));
 END TOP_Entity;
 
 ARCHITECTURE arch_TOP_Entity OF TOP_Entity IS
 SIGNAL sample_clk_temp : STD_LOGIC;
 SIGNAL sclk_en_temp : STD_LOGIC;
+SIGNAL spi_enable_temp : STD_LOGIC;
+SIGNAL spi_start_temp : STD_LOGIC;
+SIGNAL clk_spi_temp : STD_LOGIC;
 --SIGNAL clk : STD_LOGIC;
 --signal O : std_logic;
 --signal I : std_logic;
@@ -63,6 +69,7 @@ SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
 SIGNAL filter_mode_temp : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL flag_filter_mode : STD_LOGIC_VECTOR(1 DOWNTO 0);
 
+SIGNAL adc_data_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 
 -- Joakim
 
@@ -84,9 +91,12 @@ SIGNAL flag_out : STD_LOGIC_VECTOR(1 downto 0);
 -----COMPONENTS DEFINITION----------
 COMPONENT clk_enable IS
 	PORT(clk : IN STD_LOGIC;
-        sample_clk : OUT STD_LOGIC;
-        sclk : OUT STD_LOGIC;
-        sclk_en : OUT STD_LOGIC);
+      sample_clk : OUT STD_LOGIC;
+      sclk : OUT STD_LOGIC;
+      clk_spi : OUT STD_LOGIC;
+      spi_enable : out STD_LOGIC;
+      spi_start : out STD_LOGIC;
+      sclk_en : OUT STD_LOGIC);
 END COMPONENT;
 
 COMPONENT midi is port   
@@ -217,6 +227,20 @@ COMPONENT MIDI_par is
         );
 end COMPONENT;
 
+COMPONENT AD_converter IS
+   GENERIC (WIDTH_AD:INTEGER:=12);
+   PORT(clk: IN STD_LOGIC;   
+		CS_AD :OUT STD_LOGIC;
+		SCK_AD :OUT STD_LOGIC;
+		D_in :OUT STD_LOGIC;
+		clk_spi :IN STD_LOGIC;
+		spi_enable :IN STD_LOGIC;
+		spi_start :IN STD_LOGIC;			
+		D_out :IN STD_LOGIC;
+		data_out : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
+END COMPONENT AD_converter;
+
+
 COMPONENT IIS_master is
 	generic(N: integer := 12); -- Number of registers used.
     port(
@@ -323,6 +347,9 @@ clk_enable1 : clk_enable
 		clk => clk,
 		sclk => SPI(0),
 		sclk_en => sclk_en_temp,
+		spi_enable => spi_enable_temp,
+		spi_start => spi_start_temp,
+		clk_spi => clk_spi_temp,
 		sample_clk => sample_clk_temp);
 
 MIDI_par_comp : MIDI_par
@@ -460,17 +487,28 @@ DAC1 : DAC
              LDAC => SPI(2),
              CS => SPI(3));
 
+ADC1 : AD_converter
+port map(clk => clk,
+		CS_AD => ADC_SPI(0),
+		SCK_AD => ADC_SPI(1),
+		D_in => ADC_SPI(2),
+		clk_spi => clk_spi_temp,
+		spi_enable => spi_enable_temp,
+		spi_start => spi_start_temp,			
+		D_out => ADC_SPI_IN,
+		data_out => adc_data_temp);
+
 
 IIS_master1 : IIS_master
  port map(
 	    parallel_right_data => output_temp(23 downto 12),
 	    parallel_left_data => output_temp(23 downto 12),
-        word_select=>WS_out, 
+        word_select=>I2S(0), 
         reset => RESET, 
         clk => clk,
-        serial_clk_out => I2S_clk,
-        right_channel_indicator => I2S_right,     
-        serial_data=> SD_out);	
+        serial_clk_out => I2S(2),
+        right_channel_indicator => I2S(3),     
+        serial_data=> I2S(1));	
 		
 		
 END arch_TOP_Entity;
