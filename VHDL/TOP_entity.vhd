@@ -25,16 +25,20 @@ ENTITY TOP_Entity is
         from_micro_reg12 : IN STD_LOGIC_VECTOR(31 downto 0);-- LFO
         to_micro_reg13 : OUT STD_LOGIC_VECTOR(31 downto 0);  -- LFO
         to_micro_reg14 : OUT STD_LOGIC_VECTOR(31 downto 0);
-		WS_out : out STD_LOGIC; --J3 4
-	    SD_out : out std_logic; --J3 6
-	    I2S_clk : out std_logic; --J3 8
-	    I2S_right : out std_logic; --J3 10
+        I2S : out STD_LOGIC_VECTOR(3 downto 0);
+--		WS_out : out STD_LOGIC; --J3 4
+--	    SD_out : out std_logic; --J3 6
+--	    I2S_clk : out std_logic; --J3 8
+--	    I2S_right : out std_logic; --J3 10
+        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0); --12 14 16 18 20
+        ADC_SPI_IN : in STD_LOGIC;
         SPI : out STD_LOGIC_VECTOR(3 downto 0));
 END TOP_Entity;
 
 ARCHITECTURE arch_TOP_Entity OF TOP_Entity IS
 SIGNAL sample_clk_temp : STD_LOGIC;
 SIGNAL sclk_en_temp : STD_LOGIC;
+SIGNAL clk_spi_temp : STD_LOGIC;
 --SIGNAL clk : STD_LOGIC;
 --signal O : std_logic;
 --signal I : std_logic;
@@ -63,6 +67,7 @@ SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
 SIGNAL filter_mode_temp : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL flag_filter_mode : STD_LOGIC_VECTOR(1 DOWNTO 0);
 
+SIGNAL adc_data_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 
 -- Joakim
 
@@ -78,15 +83,15 @@ SIGNAL output_temp : STD_LOGIC_VECTOR(23 downto 0);
 SIGNAL flag_duty_cycle1 : STD_LOGIC;
 SIGNAL flag_duty_cycle2 : STD_LOGIC;
 SIGNAL flag_offset : STD_LOGIC;
-SIGNAL flag_out : STD_LOGIC_VECTOR(1 downto 0);
+SIGNAL flag_out : STD_LOGIC_VECTOR(2 downto 0);
 
 
 -----COMPONENTS DEFINITION----------
 COMPONENT clk_enable IS
 	PORT(clk : IN STD_LOGIC;
-        sample_clk : OUT STD_LOGIC;
-        sclk : OUT STD_LOGIC;
-        sclk_en : OUT STD_LOGIC);
+      sample_clk : OUT STD_LOGIC;
+      sclk : OUT STD_LOGIC;
+      sclk_en : OUT STD_LOGIC);
 END COMPONENT;
 
 COMPONENT midi is port   
@@ -217,6 +222,18 @@ COMPONENT MIDI_par is
         );
 end COMPONENT;
 
+COMPONENT ADC_interface IS
+    PORT(clk : IN STD_LOGIC;
+         sample_clock : IN STD_LOGIC;
+         sclk_in : IN STD_LOGIC;
+         sclk_en : IN STD_LOGIC;
+         miso : IN STD_LOGIC;
+         sclk_out : OUT STD_LOGIC; 
+         mosi : OUT STD_LOGIC;
+         cs: OUT STD_LOGIC;
+         data_to_dac : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
+END COMPONENT;
+
 COMPONENT IIS_master is
 	generic(N: integer := 12); -- Number of registers used.
     port(
@@ -259,13 +276,17 @@ IF rising_edge(clk) THEN
         END IF; 
     ELSIF from_micro_reg0= "00000110"  THEN -- OUTPUT SELEC: ADD, OSC1, OSC2....
         IF from_micro_reg1(2 downto 0) = "000" THEN 
-            flag_out <= "00"; --output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));
+            flag_out <= "000"; --output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));
         ELSIF from_micro_reg1(2 downto 0) = "001" THEN 
-            flag_out <= "01";   --output_temp(23 downto 12) <= osc_out_temp;
+            flag_out <= "001";   --output_temp(23 downto 12) <= osc_out_temp;
         ELSIF from_micro_reg1(2 downto 0) = "010" THEN 
-            flag_out <= "10";   --output_temp(23 downto 12) <= osc_out_temp2;
+            flag_out <= "010";   --output_temp(23 downto 12) <= osc_out_temp2;
         ELSIF from_micro_reg1(2 downto 0) = "011" THEN 
-                flag_out <= "11";   --output_temp(23 downto 12) <= LFO;            
+            flag_out <= "011";   --output_temp(23 downto 12) <= LFO;     
+        ELSIF from_micro_reg1(2 downto 0) = "100" THEN 
+            flag_out <= "100";   --output_temp(23 downto 12) <= ADC;  
+        ELSIF from_micro_reg1(2 downto 0) = "101" THEN 
+            flag_out <= "101";   --output_temp(23 downto 12) <= ADC+OSC2;                                        
         END IF; 
     ELSIF from_micro_reg0= "00000111"  THEN -- MIDI or LFO on Filter Cutoff frequency
         IF from_micro_reg1(2 downto 0) = "000" THEN 
@@ -291,12 +312,16 @@ IF rising_edge(clk) THEN
     ELSE
         offset_temp <= offset_midi;
     END IF; 
-    IF flag_out = "01" THEN 
+    IF flag_out = "001" THEN 
         output_temp(23 downto 12) <= osc_out_temp1;        
-    ELSIF flag_out = "10" THEN 
+    ELSIF flag_out = "010" THEN 
         output_temp(23 downto 12) <= osc_out_temp2;  
-    ELSIF flag_out = "11" THEN 
-        output_temp(23 downto 12) <= lfo_out_temp & "00000";            
+    ELSIF flag_out = "011" THEN 
+        output_temp(23 downto 12) <= lfo_out_temp & "00000";    
+    ELSIF flag_out = "100" THEN 
+        output_temp(23 downto 12) <= adc_data_temp; 
+    ELSIF flag_out = "101" THEN 
+        output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & adc_data_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));                           
     ELSE
         output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));   
     END IF;    
@@ -321,9 +346,11 @@ END PROCESS;
 clk_enable1 : clk_enable
    port map(
 		clk => clk,
-		sclk => SPI(0),
+		sclk => clk_spi_temp,
 		sclk_en => sclk_en_temp,
 		sample_clk => sample_clk_temp);
+
+SPI(0) <= clk_spi_temp;
 
 MIDI_par_comp : MIDI_par
 	Port map( 
@@ -460,17 +487,29 @@ DAC1 : DAC
              LDAC => SPI(2),
              CS => SPI(3));
 
+ADC_interface_comp :
+ADC_interface 
+PORT MAP(clk => clk,
+       sample_clock => sample_clk_temp,
+       sclk_in => clk_spi_temp,
+       sclk_en => sclk_en_temp,
+       miso => ADC_SPI_IN,
+       sclk_out => ADC_SPI(1),
+       mosi => ADC_SPI(2),
+       cs => ADC_SPI(0),
+       data_to_dac => adc_data_temp);
+
 
 IIS_master1 : IIS_master
  port map(
 	    parallel_right_data => output_temp(23 downto 12),
 	    parallel_left_data => output_temp(23 downto 12),
-        word_select=>WS_out, 
+        word_select=>I2S(0), 
         reset => RESET, 
         clk => clk,
-        serial_clk_out => I2S_clk,
-        right_channel_indicator => I2S_right,     
-        serial_data=> SD_out);	
+        serial_clk_out => I2S(2),
+        right_channel_indicator => I2S(3),     
+        serial_data=> I2S(1));	
 		
 		
 END arch_TOP_Entity;
