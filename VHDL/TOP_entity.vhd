@@ -38,8 +38,6 @@ END TOP_Entity;
 ARCHITECTURE arch_TOP_Entity OF TOP_Entity IS
 SIGNAL sample_clk_temp : STD_LOGIC;
 SIGNAL sclk_en_temp : STD_LOGIC;
-SIGNAL spi_enable_temp : STD_LOGIC;
-SIGNAL spi_start_temp : STD_LOGIC;
 SIGNAL clk_spi_temp : STD_LOGIC;
 --SIGNAL clk : STD_LOGIC;
 --signal O : std_logic;
@@ -85,7 +83,7 @@ SIGNAL output_temp : STD_LOGIC_VECTOR(23 downto 0);
 SIGNAL flag_duty_cycle1 : STD_LOGIC;
 SIGNAL flag_duty_cycle2 : STD_LOGIC;
 SIGNAL flag_offset : STD_LOGIC;
-SIGNAL flag_out : STD_LOGIC_VECTOR(1 downto 0);
+SIGNAL flag_out : STD_LOGIC_VECTOR(2 downto 0);
 
 
 -----COMPONENTS DEFINITION----------
@@ -93,9 +91,6 @@ COMPONENT clk_enable IS
 	PORT(clk : IN STD_LOGIC;
       sample_clk : OUT STD_LOGIC;
       sclk : OUT STD_LOGIC;
-      clk_spi : OUT STD_LOGIC;
-      spi_enable : out STD_LOGIC;
-      spi_start : out STD_LOGIC;
       sclk_en : OUT STD_LOGIC);
 END COMPONENT;
 
@@ -227,19 +222,17 @@ COMPONENT MIDI_par is
         );
 end COMPONENT;
 
-COMPONENT AD_converter IS
-   GENERIC (WIDTH_AD:INTEGER:=12);
-   PORT(clk: IN STD_LOGIC;   
-		CS_AD :OUT STD_LOGIC;
-		SCK_AD :OUT STD_LOGIC;
-		D_in :OUT STD_LOGIC;
-		clk_spi :IN STD_LOGIC;
-		spi_enable :IN STD_LOGIC;
-		spi_start :IN STD_LOGIC;			
-		D_out :IN STD_LOGIC;
-		data_out : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
-END COMPONENT AD_converter;
-
+COMPONENT ADC_interface IS
+    PORT(clk : IN STD_LOGIC;
+         sample_clock : IN STD_LOGIC;
+         sclk_in : IN STD_LOGIC;
+         sclk_en : IN STD_LOGIC;
+         miso : IN STD_LOGIC;
+         sclk_out : OUT STD_LOGIC; 
+         mosi : OUT STD_LOGIC;
+         cs: OUT STD_LOGIC;
+         data_to_dac : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
+END COMPONENT;
 
 COMPONENT IIS_master is
 	generic(N: integer := 12); -- Number of registers used.
@@ -283,13 +276,17 @@ IF rising_edge(clk) THEN
         END IF; 
     ELSIF from_micro_reg0= "00000110"  THEN -- OUTPUT SELEC: ADD, OSC1, OSC2....
         IF from_micro_reg1(2 downto 0) = "000" THEN 
-            flag_out <= "00"; --output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));
+            flag_out <= "000"; --output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));
         ELSIF from_micro_reg1(2 downto 0) = "001" THEN 
-            flag_out <= "01";   --output_temp(23 downto 12) <= osc_out_temp;
+            flag_out <= "001";   --output_temp(23 downto 12) <= osc_out_temp;
         ELSIF from_micro_reg1(2 downto 0) = "010" THEN 
-            flag_out <= "10";   --output_temp(23 downto 12) <= osc_out_temp2;
+            flag_out <= "010";   --output_temp(23 downto 12) <= osc_out_temp2;
         ELSIF from_micro_reg1(2 downto 0) = "011" THEN 
-                flag_out <= "11";   --output_temp(23 downto 12) <= LFO;            
+            flag_out <= "011";   --output_temp(23 downto 12) <= LFO;     
+        ELSIF from_micro_reg1(2 downto 0) = "100" THEN 
+            flag_out <= "100";   --output_temp(23 downto 12) <= ADC;  
+        ELSIF from_micro_reg1(2 downto 0) = "101" THEN 
+            flag_out <= "101";   --output_temp(23 downto 12) <= ADC+OSC2;                                        
         END IF; 
     ELSIF from_micro_reg0= "00000111"  THEN -- MIDI or LFO on Filter Cutoff frequency
         IF from_micro_reg1(2 downto 0) = "000" THEN 
@@ -315,12 +312,16 @@ IF rising_edge(clk) THEN
     ELSE
         offset_temp <= offset_midi;
     END IF; 
-    IF flag_out = "01" THEN 
+    IF flag_out = "001" THEN 
         output_temp(23 downto 12) <= osc_out_temp1;        
-    ELSIF flag_out = "10" THEN 
+    ELSIF flag_out = "010" THEN 
         output_temp(23 downto 12) <= osc_out_temp2;  
-    ELSIF flag_out = "11" THEN 
-        output_temp(23 downto 12) <= lfo_out_temp & "00000";            
+    ELSIF flag_out = "011" THEN 
+        output_temp(23 downto 12) <= lfo_out_temp & "00000";    
+    ELSIF flag_out = "100" THEN 
+        output_temp(23 downto 12) <= adc_data_temp; 
+    ELSIF flag_out = "101" THEN 
+        output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & adc_data_temp(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));                           
     ELSE
         output_temp(23 downto 12) <= STD_LOGIC_VECTOR(unsigned('0' & osc_out_temp1(11 downto 1))+(unsigned('0' & osc_out_temp2(11 downto 1))));   
     END IF;    
@@ -345,12 +346,11 @@ END PROCESS;
 clk_enable1 : clk_enable
    port map(
 		clk => clk,
-		sclk => SPI(0),
+		sclk => clk_spi_temp,
 		sclk_en => sclk_en_temp,
-		spi_enable => spi_enable_temp,
-		spi_start => spi_start_temp,
-		clk_spi => clk_spi_temp,
 		sample_clk => sample_clk_temp);
+
+SPI(0) <= clk_spi_temp;
 
 MIDI_par_comp : MIDI_par
 	Port map( 
@@ -487,16 +487,17 @@ DAC1 : DAC
              LDAC => SPI(2),
              CS => SPI(3));
 
-ADC1 : AD_converter
-port map(clk => clk,
-		CS_AD => ADC_SPI(0),
-		SCK_AD => ADC_SPI(1),
-		D_in => ADC_SPI(2),
-		clk_spi => clk_spi_temp,
-		spi_enable => spi_enable_temp,
-		spi_start => spi_start_temp,			
-		D_out => ADC_SPI_IN,
-		data_out => adc_data_temp);
+ADC_interface_comp :
+ADC_interface 
+PORT MAP(clk => clk,
+       sample_clock => sample_clk_temp,
+       sclk_in => clk_spi_temp,
+       sclk_en => sclk_en_temp,
+       miso => ADC_SPI_IN,
+       sclk_out => ADC_SPI(1),
+       mosi => ADC_SPI(2),
+       cs => ADC_SPI(0),
+       data_to_dac => adc_data_temp);
 
 
 IIS_master1 : IIS_master

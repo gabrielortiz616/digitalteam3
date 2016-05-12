@@ -1,98 +1,71 @@
 LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
-use ieee.std_logic_unsigned.all;
-USE ieee.numeric_std.ALL;
+USE ieee.std_logic_1164.ALL;	
+ 
+ENTITY adc_interface IS
+	PORT(clk : IN STD_LOGIC;
+		 sample_clock : IN STD_LOGIC;
+		 sclk_in : IN STD_LOGIC;
+		 sclk_en : IN STD_LOGIC;
+		 miso : IN STD_LOGIC;
+		 sclk_out : OUT STD_LOGIC; 
+		 mosi : OUT STD_LOGIC;
+		 cs: OUT STD_LOGIC := '1'; -- active 0
+		 data_to_dac : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
+END adc_interface;
+ 
+ARCHITECTURE arch_adc_interface OF adc_interface IS
 
-ENTITY AD_converter IS
-   GENERIC (WIDTH_AD:INTEGER:=12);
-   PORT(clk: IN STD_LOGIC;   
-		CS_AD :OUT STD_LOGIC;
-		SCK_AD :OUT STD_LOGIC;
-		D_in :OUT STD_LOGIC;
-		clk_spi :IN STD_LOGIC;
-		spi_enable :IN STD_LOGIC;
-		spi_start :IN STD_LOGIC;			
-		D_out :IN STD_LOGIC;
-		data_out : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
-END AD_converter;
+	CONSTANT start_cond : STD_LOGIC_VECTOR(3 DOWNTO 0) := "1111"; -- (3)start, (2 DOWNTO 1)single ended mode,(0)MSB first 
+	SIGNAL send : STD_LOGIC;
+	SIGNAL receive : STD_LOGIC;
+	SIGNAL started : STD_LOGIC :='0';
+	SIGNAL data_in : STD_LOGIC_VECTOR(12 DOWNTO 0);
 
-ARCHITECTURE arch_AD_converter OF AD_converter IS
+BEGIN -- architecture
+	sclk_out <= sclk_in;
 
-SIGNAL count1: INTEGER:=0;
-SIGNAL start_S, SGL_DIFF, ODD_SIGN, MS_BF: STD_LOGIC;
-SIGNAL start_temp : STD_LOGIC;
-signal data : STD_LOGIC_VECTOR(11 downto 0);
-BEGIN
-
-SGL_DIFF <= '1';
-ODD_SIGN <= '1';
-MS_BF <= '0';
-
-data_k:
-PROCESS(clk)                                       
-BEGIN
-	IF rising_edge(clk) THEN
-		IF(spi_start = '1') THEN
-			start_S <= '1';
---			finish <= '0';
-		ELSIF ((spi_enable='1') AND (start_S = '1')) THEN
-			IF(count1 <= 0) THEN	
-				CS_AD <= '0';
-				D_in <= '1';
-			ELSIF(count1 <= 1) THEN
-				D_in <= SGL_DIFF;
-			ELSIF(count1 <= 2) THEN
-				D_in <= ODD_SIGN;
-			ELSIF(count1 <= 3) THEN
-				D_in <= MS_BF;
-			ELSIF(count1 <= 6) THEN
-				data(11) <= D_out;
-			ELSIF(count1 <= 7) THEN
-				data(10) <= D_out;
-			ELSIF(count1 <= 8) THEN
-				data(9) <= D_out;
-			ELSIF(count1 <= 9) THEN
-				data(8) <= D_out;
-			ELSIF(count1 <= 10) THEN
-				data(7) <= D_out;
-			ELSIF(count1 <= 11) THEN
-				data(6) <= D_out;				
-			ELSIF(count1 <= 12) THEN
-				data(5) <= D_out;				
-			ELSIF(count1 <= 13) THEN
-				data(4) <= D_out;				
-			ELSIF(count1 <= 14) THEN
-				data(3) <= D_out;				
-			ELSIF(count1 <= 15) THEN
-				data(2) <= D_out;
-			ELSIF(count1 <= 16) THEN
-				data(1) <= D_out;
-			ELSIF(count1 <= 17) THEN
-				data(0) <= D_out;
-				CS_AD <= '1';
+	ADC_PRC : PROCESS(clk,sclk_in,sample_clock)
+		VARIABLE counter_send : INTEGER := 0;
+		VARIABLE counter_receive : INTEGER := 0;
+	BEGIN
+			IF rising_edge(clk) THEN -- send start condition
+				IF sample_clock = '1' AND started = '0' THEN				
+					IF started = '0' THEN
+						send <= '1';
+						counter_send := 0;
+						send <= '1';
+						--Led(0) <= '1';
+						started <= '1';
+					END IF;
+				ELSIF sclk_en = '1' THEN	
+					IF send = '1' THEN	
+						IF counter_send = 4 THEN -- start condition sent, start receiving data
+							receive <= '1'; 
+							send <= '0';
+							counter_send := 0;
+							mosi <= '0';
+							--Led(1) <= '1';
+						ELSE	
+							cs <= '0';
+							mosi <= start_cond(3 - counter_send);
+							counter_send := counter_send + 1;
+						END IF;
+					ELSIF receive = '1' THEN -- receive data
+						IF counter_receive = 13 THEN
+							started <= '0';
+							counter_receive := 0;
+							receive <= '0';
+							data_to_dac <= data_in(11 DOWNTO 0); -- bit 12 is null
+							--Led(2 DOWNTO 0) <= data_in(10 DOWNTO 8);
+							--Led(3) <= '1';
+							cs <= '1';
+						ELSE
+							data_in(12 - counter_receive) <= miso;
+							counter_receive := counter_receive + 1;
+							--Led(3) <= miso;
+						END IF; 
+					END IF;
+				END IF;
 			END IF;
-	
-			IF count1 <= 17 THEN
-				count1 <= count1 + 1;
-			ELSE
-				count1 <= 0;
---				finish <= '1';
-				start_S <='0';
-			END IF;	
-		END IF;
-	END IF;
-END PROCESS data_k;
-
-SCK_k: PROCESS(clk)
-BEGIN
-IF rising_edge(clk) THEN
-	IF (clk_spi = '1') THEN
-		SCK_AD <= '1';
-	ELSE
-		SCK_AD <= '0';
-	END IF;
-END IF;
-	
-end process SCK_k;
-
-END arch_AD_converter;
+	END PROCESS;
+END arch_adc_interface;

@@ -106,9 +106,11 @@ int main(void) {
 
 	// Filter variables
 
-	float wp,wp_low,wp_high, N_low, N_high, N, tempb0, tempa1, tempa2;
+	float wp, wp_low, wp_high, N_low, N_high, N, tempb0, tempa1, tempa2;
 	double Q_temp;
-	int b0, a0, a1, a2, A, B, fs, fc, Q, temp1, temp2, temp3, b0_low, a0_low, a1_low,a2_low, A_low, B_low,b0_high, a0_high, a1_high, a2_high, A_high, B_high,b0_band, a0_band, a1_band, a2_band, A_band, B_band;
+	int b0, a0, a1, a2, A, B, fs, fc, Q, temp1, temp2, temp3, b0_low, a0_low,
+			a1_low, a2_low, A_low, B_low, b0_high, a0_high, a1_high, a2_high,
+			A_high, B_high, b0_band, a0_band, a1_band, a2_band, A_band, B_band;
 	long tempin;
 	int filter_type, current_frequency;
 	int fl;
@@ -125,7 +127,6 @@ int main(void) {
 	int LFO_depth_active;
 	long filteractive;
 
-
 	// LFO variables
 
 	long LFO_in;
@@ -140,101 +141,89 @@ int main(void) {
 		fs = 40000;
 		filter_type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
 
-
-
 		if (filter_type == 1) {				// Lowpass
-
-
 
 			// Read multiplier output from register 1
 			//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 5));
 
-			if(tempin !=*(baseaddr_p + 5)){
+			if (tempin != *(baseaddr_p + 5)) {
 
+				tempin = *(baseaddr_p + 5);
+				Q = (tempin / 4096);
+				fc = tempin - Q * 4096 + 10;
+				Q_temp = Q / 100;
 
-			tempin = *(baseaddr_p + 5);
-			Q = (tempin / 4096);
-			fc = tempin - Q * 4096 + 10;
-			Q_temp = Q / 100;
+				filteractive = tempin;
 
-			filteractive = tempin;
+				xil_printf("fc: %d \n\r", fc);
+				xil_printf("Q: %d \n\r", Q);
+				wp = tan(2 * 3.1415926 * fc / (2 * fs));
+				N = 1 * 1000
+						/ (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
 
-			xil_printf("fc: %d \n\r", fc);
-			xil_printf("Q: %d \n\r", Q);
-			wp = tan(2 * 3.1415926 * fc / (2 * fs));
-			N = 1 * 1000 / (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
+				tempb0 = N * wp * wp * 1024;
 
+				tempa1 = 2 * N * (wp * wp - 1) * 1024;
+				tempa2 = N * (wp * wp - wp * 100 / (Q) + 1) * 1024;
 
+				b0 = tempb0;
 
+				a1 = abs(tempa1);
+				a2 = tempa2;
 
-			tempb0 = N * wp * wp * 1024;
+				B = b0;
 
-			tempa1 = 2 * N * (wp * wp - 1) * 1024;
-			tempa2 = N * (wp * wp - wp * 100 / (Q) + 1) * 1024;
+				A = a1 + (a2 * 4096);
+				*(baseaddr_p + 3) = A;
+				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
+				*(baseaddr_p + 4) = B;
+				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
 
-			b0 = tempb0;
-
-			a1 = abs(tempa1);
-			a2 = tempa2;
-
-			B = b0;
-
-			A = a1 + (a2 * 4096);
-			*(baseaddr_p + 3) = A;
-			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
-			*(baseaddr_p + 4) = B;
-			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
-
-			for (Delay = 0; Delay < 50000; Delay++)
-											;
+				for (Delay = 0; Delay < 50000; Delay++)
+					;
 
 			}
 		} else if (filter_type == 2) {			// Highpass
 
-
 			// Read multiplier output from register 1
 			//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 8));
 
-			if(tempin != *(baseaddr_p + 8)){
+			if (tempin != *(baseaddr_p + 8)) {
 
-			tempin = *(baseaddr_p + 8);
+				tempin = *(baseaddr_p + 8);
 
-			Q = (tempin / 4096);
-			fc = tempin - Q * 4096;
-			Q_temp = Q / 100;
+				Q = (tempin / 4096);
+				fc = tempin - Q * 4096;
+				Q_temp = Q / 100;
 
-			xil_printf("fc: %d \n\r", fc);
-			xil_printf("Q: %d \n\r", Q);
-			wp = tan(2 * 3.1415926 * fc / (2 * fs));
-			N = 1 * 1000 / (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
+				xil_printf("fc: %d \n\r", fc);
+				xil_printf("Q: %d \n\r", Q);
+				wp = tan(2 * 3.1415926 * fc / (2 * fs));
+				N = 1 * 1000
+						/ (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
 
+				b0 = N * 1024;
 
+				a1 = abs(2 * N * (wp * wp - 1)) * 1024;
+				a2 = N * (wp * wp - wp * 100 / Q + 1) * 1024;
 
+				//b0 = 967;
+				//a1=1931;
+				//a2=914;
 
-			b0 = N * 1024;
+				B = b0;
 
-			a1 = abs(2 * N * (wp * wp - 1)) * 1024;
-			a2 = N * (wp * wp - wp * 100 / Q + 1) * 1024;
+				A = a1 + (a2 * 4096);
 
-			//b0 = 967;
-			//a1=1931;
-			//a2=914;
+				*(baseaddr_p + 6) = A;
+				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 6));
+				*(baseaddr_p + 7) = B;
+				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 7));
 
-			B = b0;
+				*(baseaddr_p + 9) = B;
 
-			A = a1 + (a2 * 4096);
-
-
-
-			*(baseaddr_p + 6) = A;
-			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 6));
-			*(baseaddr_p + 7) = B;
-			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 7));
-
-			*(baseaddr_p + 9) = B;
-
-			for (Delay = 0; Delay < 200000; Delay++)
-												;
+				for (Delay = 0; Delay < 200000; Delay++)
+					;
 
 			}
 //		} else if (filter_type == 3) {
@@ -302,23 +291,21 @@ int main(void) {
 
 		}
 
-
 		// LFO
 		//xil_printf("Read LFO: 0x%08x \n\r", *(baseaddr_p + 13));
 		LFO_in = *(baseaddr_p + 13);
 
-		if(LFO_in != LFOactive){
+		if (LFO_in != LFOactive) {
 
-		LFOactive = LFO_in;
+			LFOactive = LFO_in;
 
-		LFO_depth = (LFO_in / 128);
-		LFO_frequency = (LFO_in - LFO_depth * 128)*100/450;
-		xil_printf("LFO: %d \n\r", LFO_frequency);
-		LFO_out = fs / (2*LFO_frequency*LFO_depth);
+			LFO_depth = (LFO_in / 128);
+			LFO_frequency = (LFO_in - LFO_depth * 128) * 100 / 450;
+			xil_printf("LFO: %d \n\r", LFO_frequency);
+			LFO_out = fs / (2 * LFO_frequency * LFO_depth);
 
-		*(baseaddr_p + 12) = LFO_out;
+			*(baseaddr_p + 12) = LFO_out;
 		}
-
 
 		// 		User interface
 
@@ -643,7 +630,7 @@ int main(void) {
 					counter_side_output = counter_side_output + 1;
 					for (Delay = 0; Delay < 900000; Delay++)
 						;
-					if (counter_side_output == 5) {
+					if (counter_side_output == 7) {
 						counter_side_output = 0;
 					}
 					flag = 1;
@@ -654,7 +641,7 @@ int main(void) {
 						;
 					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 					if (counter_side_output == 0) {
-						counter_side_output = 4;
+						counter_side_output = 6;
 					} else {
 						counter_side_output = counter_side_output - 1;
 					}
@@ -686,6 +673,18 @@ int main(void) {
 						*(baseaddr_p + 0) = 0x00000006;
 						*(baseaddr_p + 1) = 0x00000003;
 						snprintf(out, 17, "%s", "LFO              ");
+					} else if (counter_side_output == 5) {
+						kc_LCDPrintString("Output Signal:  ",
+								"ADC             ");
+						*(baseaddr_p + 0) = 0x00000006;
+						*(baseaddr_p + 1) = 0x00000004;
+						snprintf(out, 17, "%s", "ADC              ");
+					} else if (counter_side_output == 6) {
+						kc_LCDPrintString("Output Signal:  ",
+								"ADC+OSC2        ");
+						*(baseaddr_p + 0) = 0x00000006;
+						*(baseaddr_p + 1) = 0x00000005;
+						snprintf(out, 17, "%s", "ADC+OSC2        ");
 					}
 				}
 			} else if (counter_vertical == 6) {  //FilterCutoff
