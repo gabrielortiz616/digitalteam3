@@ -1,3 +1,9 @@
+----------------------------------------------
+--     Author: Gabriel Ortiz Betancur
+--     DAT093
+--     2015
+----------------------------------------------
+
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;	
  

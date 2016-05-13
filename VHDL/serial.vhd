@@ -1,3 +1,9 @@
+--------------------------------------------
+-- Credits: rene-dev
+-- avaliable at: https://github.com/rene-dev/fpga-midi-synth/blob/master/rtl/uart.vhd
+--------------------------------------------
+
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;

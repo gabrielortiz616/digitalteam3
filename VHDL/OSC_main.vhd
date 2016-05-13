@@ -70,18 +70,18 @@ COMPONENT PAC_adder
 END COMPONENT;
 
 COMPONENT reg24to12
-      PORT(D : IN STD_LOGIC_VECTOR(20 DOWNTO 0);
-           reset : IN std_logic;
-	  		  slowclk : IN STD_LOGIC; -- slowclock
-	        clk : IN STD_LOGIC; -- fastclock.
-	        midi_note : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-			  Q24 : OUT STD_LOGIC_VECTOR(20 DOWNTO 0);
-           Q : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
+	PORT(D : IN STD_LOGIC_VECTOR(20 DOWNTO 0);
+		reset : IN std_logic;
+		slowclk : IN STD_LOGIC; -- slowclock
+		clk : IN STD_LOGIC; -- fastclock.
+		midi_note : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+		Q24 : OUT STD_LOGIC_VECTOR(20 DOWNTO 0);
+		Q : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
 END COMPONENT;
 
 COMPONENT Sine_LUT
-      PORT(address : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
-           data : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
+	PORT(address : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+		data : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
 END COMPONENT;
 
 COMPONENT Triangle_LUT
@@ -247,7 +247,7 @@ WhiteNoise1 : WhiteNoise
 port map(
     clk => clk,
     sample_clk  => sample_clk,
-    random_num  => mux_in_whitenoise_temp);   --output vector            
+    random_num  => mux_in_whitenoise_temp);           
 
 PROCESS(clk)
 BEGIN

@@ -3,9 +3,9 @@ USE ieee.std_logic_1164.ALL;
 
 ENTITY clk_enable IS
 	PORT(clk : IN STD_LOGIC;
-		  sample_clk : OUT STD_LOGIC;
-		  sclk : OUT STD_LOGIC;
-		  sclk_en : OUT STD_LOGIC);
+		  sample_clk : OUT STD_LOGIC;  -- Sample Clock 
+		  sclk : OUT STD_LOGIC;  -- SPI Clock
+		  sclk_en : OUT STD_LOGIC); -- SPI Clock Enable
 END clk_enable;
 
 ARCHITECTURE behavior OF clk_enable IS
@@ -20,7 +20,9 @@ BEGIN
     variable int_sclk : STD_LOGIC := '1';
     variable int_sclk_spi : STD_LOGIC := '1';
 	BEGIN
-		IF rising_edge(clk) THEN			
+		IF rising_edge(clk) THEN	
+
+			---- Sample Clock 40kHz ----
 			IF counter_slow = 2500-1 THEN
 				sample_clk <= '1';
 				counter_slow <= 0;
@@ -29,13 +31,15 @@ BEGIN
 				counter_slow <= counter_slow + 1;
 			END IF;
 			
+			--- SPI Clock 1MHz -----
             counter_sclk <= counter_sclk + 1;
             IF counter_sclk = 50-1 THEN
                 int_sclk := not int_sclk;
                 sclk <= int_sclk;
                 counter_sclk <= 0;
             END IF;
-            
+            			
+			--- SPI Clock Enable ----
             IF counter_en = 100-1 THEN
                 sclk_en <= '1';
                 counter_en <= 0;

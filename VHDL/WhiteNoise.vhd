@@ -6,7 +6,7 @@ entity WhiteNoise is
 port (
       clk : in std_logic;
       sample_clk : in std_logic;
-      random_num : out std_logic_vector (11 downto 0)   --output vector            
+      random_num : out std_logic_vector (11 downto 0)            
     );
 end WhiteNoise;
 

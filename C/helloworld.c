@@ -125,7 +125,7 @@ int main(void) {
 	int b0, a0, a1, a2, A, B, fs, fc, Q, temp1, temp2, temp3, b0_low, a0_low,
 			a1_low, a2_low, A_low, B_low, b0_high, a0_high, a1_high, a2_high,
 			A_high, B_high, b0_band, a0_band, a1_band, a2_band, A_band, B_band;
-	long tempin;
+	long tempin,tempin2;
 	int filter_type, current_frequency;
 	int fl;
 	int fh;
@@ -201,12 +201,12 @@ int main(void) {
 		// Read multiplier output from register 1
 		//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 8));
 
-		if (tempin != *(baseaddr_p + 8)) {
+		if (tempin2 != *(baseaddr_p + 8)) {
 
-			tempin = *(baseaddr_p + 8);
+			tempin2 = *(baseaddr_p + 8);
 
-			Q = (tempin / 4096);
-			fc = tempin - Q * 4096;
+			Q = (tempin2 / 4096);
+			fc = tempin2 - Q * 4096;
 			Q_temp = Q / 100;
 
 			xil_printf("fc: %d \n\r", fc);
