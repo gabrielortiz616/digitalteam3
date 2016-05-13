@@ -63,10 +63,13 @@ SIGNAL duty_int_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL offset_int_temp_prev : STD_LOGIC_VECTOR(4 DOWNTO 0); 
 SIGNAL duty_int_temp_prev : STD_LOGIC_VECTOR(6 DOWNTO 0); 
 SIGNAL lfo_out_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);
+SIGNAL lfo_mode_temp : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL offset_null : STD_LOGIC_VECTOR(4 DOWNTO 0);
 SIGNAL filter_mode_temp : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL flag_filter_mode : STD_LOGIC_VECTOR(1 DOWNTO 0);
-
+SIGNAL flag_filter_type : STD_LOGIC_VECTOR(1 DOWNTO 0);
+SIGNAL flag_lfo_type : STD_LOGIC_VECTOR(1 DOWNTO 0);
+--ADC OUTPUT---
 SIGNAL adc_data_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
 
 -- Joakim
@@ -293,7 +296,21 @@ IF rising_edge(clk) THEN
             flag_filter_mode <= "00" ; --filter cutoff midi
         ELSIF from_micro_reg1(2 downto 0) = "001" THEN 
             flag_filter_mode <= "01" ;  -- filter cutoff LFO
-        END IF; 		
+        END IF;
+    ELSIF from_micro_reg0= "00001000"  THEN -- Filter Type
+        IF from_micro_reg1(2 downto 0) = "000" THEN 
+            flag_filter_type <= "00" ; -- Lowpass
+        ELSIF from_micro_reg1(2 downto 0) = "001" THEN 
+            flag_filter_type <= "01" ;  -- Highpass
+        END IF;
+    ELSIF from_micro_reg0= "00001001"  THEN -- LFO Wavetype
+        IF from_micro_reg1(2 downto 0) = "000" THEN 
+            flag_lfo_type <= "00" ; -- Triangle
+        ELSIF from_micro_reg1(2 downto 0) = "001" THEN 
+            flag_lfo_type <= "01" ;  -- Square
+        ELSIF from_micro_reg1(2 downto 0) = "010" THEN 
+                flag_lfo_type <= "10" ;  -- Sawtooth
+        END IF;                         		
     END IF;
     
     ------FLAGS ASSESMENT------
@@ -329,6 +346,18 @@ IF rising_edge(clk) THEN
         filter_mode_temp <= "01";
     ELSE
         filter_mode_temp <= "00";
+    END IF; 
+    IF flag_filter_type = "01" THEN 
+         FWave_temp <= FWave_temp_HP;
+    ELSE
+        FWave_temp <= FWave_temp_LP; 
+    END IF; 
+    IF flag_lfo_type = "01" THEN 
+        lfo_mode_temp <= "01";
+    ELSIF flag_lfo_type = "10" THEN
+       lfo_mode_temp <= "10"; 
+    ELSE
+        lfo_mode_temp <= "00";
     END IF; 
 
 IF offset_int_temp /= offset_int_temp_prev THEN
@@ -407,7 +436,7 @@ OSC_Main2 : OSC_Main
 LFO1 : LFO
  port map (clk => clk,
            sample_clk => sample_clk_temp, 
-           mode => "00",
+           mode => lfo_mode_temp,
            LFO_depth => LFO_max_temp,
            LFO_frequency => LFO_freq_temp,
            LFO_to_micro => to_micro_reg13,
@@ -461,9 +490,8 @@ port map( 	clk => clk,
 --time_sustain_temp <= "0010000";
 --time_release_temp <= "0010000";
 
-WITH from_micro_reg9 SELECT
-    FWave_temp <= FWave_temp_LP WHEN "00000000000000000000000000000000",
-                  FWave_temp_HP WHEN OTHERS;
+
+   
 
 envelope_comp1: envelope
   port map(
