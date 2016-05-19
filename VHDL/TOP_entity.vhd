@@ -1,3 +1,7 @@
+-------------------------------------------------------
+--! @file
+--! @brief MAIN ENTITY
+-------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 use ieee.std_logic_unsigned.all;
@@ -5,6 +9,7 @@ USE ieee.numeric_std.ALL;
 Library UNISIM;
 use UNISIM.vcomponents.all;
 
+--! Description of top entity Entity
 ENTITY TOP_Entity is
     GENERIC(N:INTEGER:=4);
     PORT(clk : IN STD_LOGIC;	
@@ -30,11 +35,13 @@ ENTITY TOP_Entity is
 --	    SD_out : J3 6
 --	    I2S_clk : J3 8
 --	    I2S_right : J3 10
-        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0); --12 14 16 18 20
-        ADC_SPI_IN : in STD_LOGIC;
-        SPI : out STD_LOGIC_VECTOR(3 downto 0));
+        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0); --12 14 16 
+        ADC_SPI_IN : in STD_LOGIC; -- J3 18
+        SPI : out STD_LOGIC_VECTOR(3 downto 0)); -- Connected to DAC on the AC701 Board
 END TOP_Entity;
 
+
+--! Description of Top-entity Architecture
 ARCHITECTURE arch_TOP_Entity OF TOP_Entity IS
 SIGNAL sample_clk_temp : STD_LOGIC;
 SIGNAL sclk_en_temp : STD_LOGIC;
@@ -88,6 +95,7 @@ SIGNAL flag_filter_type : STD_LOGIC_VECTOR(1 DOWNTO 0);
 SIGNAL flag_lfo_type : STD_LOGIC_VECTOR(1 DOWNTO 0);
 
 -----COMPONENTS DEFINITION----------
+--! Component clock enable
 COMPONENT clk_enable IS
 	PORT(clk : IN STD_LOGIC;
       sample_clk : OUT STD_LOGIC;
@@ -95,6 +103,7 @@ COMPONENT clk_enable IS
       sclk_en : OUT STD_LOGIC);
 END COMPONENT;
 
+--! Component midi
 COMPONENT midi is 
 	port(clk: IN STD_LOGIC;
        midi_in   : in  std_logic;
@@ -106,6 +115,7 @@ COMPONENT midi is
        );
 end COMPONENT;
 
+--! Component OSC Main
 COMPONENT OSC_Main
 	PORT(midi_note:IN STD_LOGIC_VECTOR(7 DOWNTO 0);
 		wave_type:IN STD_LOGIC_VECTOR(2 DOWNTO 0);
@@ -121,6 +131,7 @@ COMPONENT OSC_Main
 		oscout:OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
 END COMPONENT;
 
+--! Component LFO
 COMPONENT LFO
 	Port ( 
 		clk, sample_clk : in  STD_LOGIC;

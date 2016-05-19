@@ -1,9 +1,17 @@
+-------------------------------------------------------
+--! @file
+--! @brief Translate MIDI Note to phase increment sizer for the numerically controlled oscillator
+-------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
-entity MIDI_Increment_LUT is
- port ( address : in std_logic_vector(7 downto 0);
-    data : out std_logic_vector(20 downto 0));
+
+--! Receive the MIDI Note number and returns the phase increment for the NCO
+ENTITY MIDI_Increment_LUT IS
+ port ( address : in std_logic_vector(7 downto 0); --! MIDI Note number
+    data : out std_logic_vector(20 downto 0)); --! Phase increment size for NCO
  end entity MIDI_Increment_LUT;
+ 
+--! Translate MIDI Note to phase increment sizer for the numerically controlled oscillator
  architecture arch_MIDI_Increment_LUT of MIDI_Increment_LUT is
     type mem is array ( 0 to 82) of std_logic_vector(20 downto 0);
     constant MIDI_rom : mem := (

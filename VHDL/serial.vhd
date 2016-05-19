@@ -1,6 +1,7 @@
 --------------------------------------------
--- Credits: rene-dev
--- avaliable at: https://github.com/rene-dev/fpga-midi-synth/blob/master/rtl/uart.vhd
+--! @file
+--! Credits: rene-dev
+--! avaliable at: https://github.com/rene-dev/fpga-midi-synth/blob/master/rtl/uart.vhd
 --------------------------------------------
 
 

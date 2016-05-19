@@ -1,15 +1,21 @@
+-------------------------------------------------------
+--! @file
+--! @brief Pseudo random number generator for white noise
+-------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
+--! Outputs random number of 12 bit
 entity WhiteNoise is
     generic ( width : integer :=  24 ); 
 port (
-      clk : in std_logic;
-      sample_clk : in std_logic;
-      random_num : out std_logic_vector (11 downto 0)            
+      clk : in std_logic; --! Clock
+      sample_clk : in std_logic; --! Sample Clock
+      random_num : out std_logic_vector (11 downto 0) --! Random number out            
     );
 end WhiteNoise;
 
+--! Linear Feedback shift register used to generate white noise
 architecture arch_WhiteNoise of WhiteNoise is
 begin
 	process(clk)

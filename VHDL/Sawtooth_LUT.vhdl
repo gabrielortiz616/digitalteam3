@@ -1,9 +1,17 @@
+-------------------------------------------------------
+--! @file
+--! @brief Translates the Phase from the Phase Accumulator Register to the amplitude of a Sawtooth wave
+-------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
+
+--! Receives Phase and returns amplitude of sawtooth wave
 entity Sawtooth_LUT is
- port ( address : in std_logic_vector(11 downto 0);
-    data : out std_logic_vector(11 downto 0));
+ port ( address : in std_logic_vector(11 downto 0); --! Phase
+    data : out std_logic_vector(11 downto 0)); --! Amplitude
  end entity Sawtooth_LUT;
+ 
+ --! Receives Phase and returns amplitude of sawtooth wave
  architecture arch_Sawtooth_LUT of Sawtooth_LUT is
     type mem is array ( 0 to 2**12 - 1) of std_logic_vector(11 downto 0);
     constant saw_rom : mem := (

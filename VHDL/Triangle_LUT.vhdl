@@ -1,9 +1,17 @@
+-------------------------------------------------------
+--! @file
+--! @brief Translates the Phase from the Phase Accumulator Register to the amplitude of a Triangle wave
+-------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
+
+--! Receives Phase and returns amplitude of triangle wave
 entity Triangle_LUT is
- port ( address : in std_logic_vector(11 downto 0);
-    data : out std_logic_vector(11 downto 0));
+ port ( address : in std_logic_vector(11 downto 0); --! Phase
+    data : out std_logic_vector(11 downto 0)); --! Amplitude
  end entity Triangle_LUT;
+
+ --! Receives Phase and returns amplitude of triangle wave
  architecture arch_Triangle_LUT of Triangle_LUT is
     type mem is array ( 0 to 2**12 - 1) of std_logic_vector(11 downto 0);
     constant triangle_rom : mem := (
