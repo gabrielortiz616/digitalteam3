@@ -19,7 +19,10 @@ entity myip_v1_0 is
 	port (
 		-- Users to add ports here
         RESET : IN STD_LOGIC;
+        I2S : out STD_LOGIC_VECTOR(3 downto 0);
         SPI : out STD_LOGIC_VECTOR(3 downto 0);
+        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0);
+        ADC_SPI_IN : in STD_LOGIC;
         midi_in : in STD_LOGIC;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
@@ -81,8 +84,10 @@ architecture arch_imp of myip_v1_0 is
 		S_AXI_RVALID	: out std_logic;
 		S_AXI_RREADY	: in std_logic;
 		RESET : IN STD_LOGIC;
-               --LED
+        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0);
+        ADC_SPI_IN : in STD_LOGIC;
         SPI : out STD_LOGIC_VECTOR(3 downto 0);
+        I2S : out STD_LOGIC_VECTOR(3 downto 0);
         midi_in : in STD_LOGIC
 		);
 	end component myip_v1_0_S00_AXI;
@@ -119,6 +124,9 @@ myip_v1_0_S00_AXI_inst : myip_v1_0_S00_AXI
 		S_AXI_RREADY	=> s00_axi_rready,
 		RESET => RESET,
         midi_in => midi_in,
+        I2S => I2S,
+        ADC_SPI => ADC_SPI,
+        ADC_SPI_IN => ADC_SPI_IN,
         SPI => SPI
 	);
 

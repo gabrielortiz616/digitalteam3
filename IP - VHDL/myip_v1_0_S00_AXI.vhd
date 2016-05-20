@@ -20,6 +20,9 @@ entity myip_v1_0_S00_AXI is
 		-- Users to add ports here
         RESET : IN STD_LOGIC;
         SPI : out STD_LOGIC_VECTOR(3 downto 0);
+        ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0);
+        ADC_SPI_IN : in STD_LOGIC;
+        I2S : out STD_LOGIC_VECTOR(3 downto 0);
         midi_in : in STD_LOGIC;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
@@ -152,6 +155,9 @@ COMPONENT TOP_Entity
           from_micro_reg12 : IN STD_LOGIC_VECTOR(31 downto 0);
           to_micro_reg13 : OUT STD_LOGIC_VECTOR(31 downto 0);
           to_micro_reg14 : OUT STD_LOGIC_VECTOR(31 downto 0);
+          I2S : out STD_LOGIC_VECTOR(3 downto 0);
+          ADC_SPI : out STD_LOGIC_VECTOR(2 downto 0);
+          ADC_SPI_IN : in STD_LOGIC;
           SPI : out STD_LOGIC_VECTOR(3 downto 0));
 END COMPONENT;
 
@@ -580,6 +586,9 @@ TOP_Entity1 : TOP_Entity
                to_micro_reg13 => out_temp5,
                to_micro_reg14 => out_temp6,
                midi_in => midi_in,
+               I2S => I2S,
+               ADC_SPI => ADC_SPI,
+               ADC_SPI_IN => ADC_SPI_IN,
                SPI => SPI);
 	-- User logic ends
 
