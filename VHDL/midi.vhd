@@ -1,36 +1,44 @@
+-------------------------------------------------------
+--! @file
+--! @brief Handles the MIDI messages, sorting by status and values
+-------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-
+--! Handles the MIDI Messages, main input is the MIDI channel from the keyboard
 entity midi is 
-port(  CLK: IN STD_LOGIC;
-       midi_in   : in  std_logic;
-       note_on_out   : out  std_logic;
-       pitch_on_out   : out  std_logic;
-       midi_ch   : out std_logic_vector(3 downto 0);
-       midi_control   : out std_logic_vector(6 downto 0);
-       midi_control_data   : out std_logic_vector(6 downto 0);
-       midi_pitch : OUT STD_LOGIC_VECTOR(6 downto 0);  
-       midi_note_out: out  std_logic_vector(7 downto 0)
+port(  CLK: IN STD_LOGIC; --! Clock 100MHz
+       midi_in   : in  std_logic; --! MIDI data in from keyboard
+       note_on_out   : out  std_logic; --! Note On signal
+       pitch_on_out   : out  std_logic; --! Pitch bend wheel modified signal 
+       midi_ch   : out std_logic_vector(3 downto 0); --! channel in MIDI 
+       midi_control   : out std_logic_vector(6 downto 0); --! MIDI control knobs changed
+       midi_control_data   : out std_logic_vector(6 downto 0); --! Value of the MIDI Control Knob changed
+       midi_pitch : OUT STD_LOGIC_VECTOR(6 downto 0); --! Value of the Pitch bend rotation
+       midi_note_out: out  std_logic_vector(7 downto 0) --! MIDI Note to be played
        );
 end midi;
 
+--! Filters the messages according to the status, recognize the note on or note of messages as well as the pitchbend or control messages. Captures the data from each messages and assigns it to the specific signal out.
 architecture rtl of midi is
-type midi_state_type is (status,note_off,note_on,no_status,velocity,controllers,control_data,pitchbend,no_status_pitch,pitchbend2,pitchfake,pitchfake2);signal midi_new       : std_logic;
-signal midi_velo :  std_logic_vector(6 downto 0) := "0000000";
-signal midi_note :  std_logic_vector(6 downto 0) := "0000000";
-signal uart_busy    : std_logic;
-signal midi_data       : std_logic_vector(7 downto 0);
-signal midi_state      : midi_state_type := status;
-signal next_midi_state : midi_state_type := status;
-signal falling         : std_logic := '0';
-signal off             : std_logic := '0';
-signal key             : std_logic := '0';
-signal pitch_on        : std_logic := '0';
-signal pitch           : std_logic := '0';
-signal pitch_off1       : std_logic := '0';
-signal midi_pitch_null :  std_logic_vector(6 downto 0) := "0000000";
+type midi_state_type is (status,note_off,note_on,no_status,velocity,controllers,control_data,pitchbend,no_status_pitch,pitchbend2,pitchfake,pitchfake2); --! States of the state machine
+signal midi_new       : std_logic; --! Recognize a new message
+signal midi_velo :  std_logic_vector(6 downto 0) := "0000000"; --! MIDI Velocity
+signal midi_note :  std_logic_vector(6 downto 0) := "0000000"; --! MIDI Note
+signal uart_busy    : std_logic; --! UART is Busy
+signal midi_data       : std_logic_vector(7 downto 0); --! Data received from the RS232 interface
+signal midi_state      : midi_state_type := status; --! Actual state of the state machine
+signal next_midi_state : midi_state_type := status; --! next stage of the state machine
+signal falling         : std_logic := '0'; --! Recognize falling edge 
+signal off             : std_logic := '0'; --! Note OFF
+signal key             : std_logic := '0'; --! '1' if a key in the keyboard has been pressed
+signal pitch_on        : std_logic := '0'; --! '1' Pitch bend is being modified
+signal pitch           : std_logic := '0'; --! Pitch bend roation value
+signal pitch_off1       : std_logic := '0'; --! '1' if pitch bend is not longer being modified
+signal midi_pitch_null :  std_logic_vector(6 downto 0) := "0000000"; --! Pitch less significant value that can be ignored}
+
+
 COMPONENT RS232
 PORT ( RXD      : in   STD_LOGIC;
                         RX_Data  : out  STD_LOGIC_VECTOR (7 downto 0);

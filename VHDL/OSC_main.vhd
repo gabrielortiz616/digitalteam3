@@ -1,45 +1,56 @@
+-------------------------------------------------------
+--! @file
+--! @brief Main Oscillators entity
+-------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 use ieee.std_logic_unsigned.all;
 USE ieee.numeric_std.ALL;
 
-ENTITY OSC_Main is
-      PORT(midi_note:IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-           midi_pitch:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
-		   wave_type:IN STD_LOGIC_VECTOR(2 DOWNTO 0);
-           duty_cycle:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
-           offset:IN STD_LOGIC_VECTOR(6 DOWNTO 0);
-           offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);
-           duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);
-           clk : IN STD_LOGIC;
-           pitch_on_in   : in  std_logic;	
-           sample_clk : IN STD_LOGIC;
-		   reset:IN STD_LOGIC;
-           oscout:OUT STD_LOGIC_VECTOR(11 DOWNTO 0));
-END OSC_Main;
 
+--! Description of Entity
+ENTITY OSC_Main is
+      PORT(midi_note:IN STD_LOGIC_VECTOR(7 DOWNTO 0); --! Note number coming from the MIDI Interface 
+           midi_pitch:IN STD_LOGIC_VECTOR(6 DOWNTO 0); --! Pitch Change value coming from the MIDI Interface
+		   wave_type:IN STD_LOGIC_VECTOR(2 DOWNTO 0); --! Wave type selected by the user interface
+           duty_cycle:IN STD_LOGIC_VECTOR(6 DOWNTO 0); --! Duty cycle coming from MIDI interface or LFO
+           offset:IN STD_LOGIC_VECTOR(6 DOWNTO 0); --! Offset value coming from MIDI interface or LFO
+           offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0); --! Offset integer value to show on the LCD display
+           duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0); --! Duty cycle integer value to show on the LCD display
+           clk : IN STD_LOGIC; --! clock (100 MHz)
+           pitch_on_in   : in  std_logic; --! Pitch bend ON signal
+           sample_clk : IN STD_LOGIC; --! Sample clock (40kHz)
+		   reset:IN STD_LOGIC; --! Reset signal active low
+           oscout:OUT STD_LOGIC_VECTOR(11 DOWNTO 0)); --! Output from the oscillator
+END ENTITY OSC_Main;
+
+
+--! @brief Oscillators
+--! @detailed The oscillators component receives inputs from the MIDI interface and the user interface to generate the desired waveforms at the desired frequency. It uses a numerically controlled oscillator and look up tables to generate most of the waveforms and a counter for the square wave.
 ARCHITECTURE arch_OSC_Main OF OSC_Main IS
-SIGNAL out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL increment_temp : STD_LOGIC_VECTOR(20 DOWNTO 0);
-SIGNAL increment_temp1 : STD_LOGIC_VECTOR(41 DOWNTO 0);
-SIGNAL increment_temp2 : STD_LOGIC_VECTOR(41 DOWNTO 0);
-SIGNAL increment_midi : STD_LOGIC_VECTOR(20 DOWNTO 0);
-SIGNAL counter_size_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL Q_temp24 : STD_LOGIC_VECTOR(20 DOWNTO 0);
-SIGNAL Q_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL mux_in_triangle_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL mux_in_sine_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL mux_in_square_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL mux_in_whitenoise_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL mux_in_sawtooth_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL D_temp : STD_LOGIC_VECTOR(20 DOWNTO 0);
-SIGNAL overflow_temp : STD_LOGIC;
-SIGNAL square_counter_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL Square_Reg_Q_temp : STD_LOGIC_VECTOR(11 DOWNTO 0);
-SIGNAL comp_out_temp : STD_LOGIC;
-SIGNAL midi_note_temp : STD_LOGIC_VECTOR(7 DOWNTO 0);
-SIGNAL midi_pitch_temp : STD_LOGIC_VECTOR(7 DOWNTO 0);
-SIGNAL pitch_inc_temp : STD_LOGIC_VECTOR(20 DOWNTO 0);
+
+SIGNAL increment_temp : STD_LOGIC_VECTOR(20 DOWNTO 0); --! Temporary increment for Pitch calculations
+SIGNAL increment_temp1 : STD_LOGIC_VECTOR(41 DOWNTO 0); --! Temporary increment for Pitch calculations
+SIGNAL increment_temp2 : STD_LOGIC_VECTOR(41 DOWNTO 0); --! Temporary increment for Pitch calculations
+SIGNAL increment_midi : STD_LOGIC_VECTOR(20 DOWNTO 0); --! Phase increment after the MIDI Note to Increment LUT
+SIGNAL counter_size_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Counter size for the square wave 
+SIGNAL Q_temp24 : STD_LOGIC_VECTOR(20 DOWNTO 0); --!  24 bit output from the Phase accumulator register
+SIGNAL Q_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! 12 bit output from the phase accumulator register
+SIGNAL mux_in_triangle_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Triangle wave to mux
+SIGNAL mux_in_sine_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Sine wave to mux
+SIGNAL mux_in_square_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Square wave to mux 
+SIGNAL mux_in_whitenoise_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! White noise wave to mux
+SIGNAL mux_in_sawtooth_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Sawtooth wave to mux
+SIGNAL D_temp : STD_LOGIC_VECTOR(20 DOWNTO 0); --! Input to phase accumulator register
+SIGNAL overflow_temp : STD_LOGIC; --! Overflow for square wave and duty cycle controlling
+SIGNAL square_counter_out_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Counter output for square wave
+SIGNAL Square_Reg_Q_temp : STD_LOGIC_VECTOR(11 DOWNTO 0); --! Duty cycle register output
+SIGNAL comp_out_temp : STD_LOGIC; --! Output of square comparator 
+SIGNAL midi_note_temp : STD_LOGIC_VECTOR(7 DOWNTO 0); --! MIDI Note
+SIGNAL midi_pitch_temp : STD_LOGIC_VECTOR(7 DOWNTO 0); --! MIDI Pitch 
+SIGNAL pitch_inc_temp : STD_LOGIC_VECTOR(20 DOWNTO 0); --! Phase increment given by pitch
+
+--- Components definition ----
 
 COMPONENT MIDI_Count_LUT
       PORT(address : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
@@ -70,18 +81,18 @@ COMPONENT PAC_adder
 END COMPONENT;
 
 COMPONENT reg24to12
-      PORT(D : IN STD_LOGIC_VECTOR(20 DOWNTO 0);
-           reset : IN std_logic;
-	  		  slowclk : IN STD_LOGIC; -- slowclock
-	        clk : IN STD_LOGIC; -- fastclock.
-	        midi_note : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-			  Q24 : OUT STD_LOGIC_VECTOR(20 DOWNTO 0);
-           Q : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
+	PORT(D : IN STD_LOGIC_VECTOR(20 DOWNTO 0);
+		reset : IN std_logic;
+		slowclk : IN STD_LOGIC; -- slowclock
+		clk : IN STD_LOGIC; -- fastclock.
+		midi_note : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+		Q24 : OUT STD_LOGIC_VECTOR(20 DOWNTO 0);
+		Q : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
 END COMPONENT;
 
 COMPONENT Sine_LUT
-      PORT(address : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
-           data : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
+	PORT(address : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+		data : OUT STD_LOGIC_VECTOR(11 DOWNTO 0));  
 END COMPONENT;
 
 COMPONENT Triangle_LUT
@@ -147,22 +158,26 @@ end COMPONENT;
 
 BEGIN
 
-
-MIDI_Increment_LUT1 : MIDI_Increment_LUT
+--! Receives and address from MIDI interface and gives a phase increment
+MIDI_Increment_LUT1 : MIDI_Increment_LUT 
    port map(
 		address => midi_note_temp,
       data => increment_midi);
 
-MIDI_Count_LUT1 : MIDI_Count_LUT
+--! Receives and address from MIDI interface and gives a counter size for square wave	  
+MIDI_Count_LUT1 : MIDI_Count_LUT  
    port map(
 		address => midi_note_temp, 
         data => counter_size_temp);
 
-Pitch_LUT1 : Pitch_LUT
+--! Receives pitch change value from MIDI interface and give a phase increment multiplicator		
+Pitch_LUT1 : Pitch_LUT 
    port map(
 		address => '0' & midi_pitch,
         data => pitch_inc_temp);
-Offset_LUT1 : Offset_LUT
+		
+--! Receives an offset value from MIDI interface or LFO and returns the Note to be played		
+Offset_LUT1 : Offset_LUT 
    port map(
         clk => clk,
 		offset_in => offset,
@@ -170,13 +185,15 @@ Offset_LUT1 : Offset_LUT
 		midi_note => midi_note, 
         midi_note_temp => midi_note_temp);
 
-PAC_adder1 : PAC_adder
+--! Phase accumulator adder		
+PAC_adder1 : PAC_adder 
    port map(
       add => increment_temp, 
       actual => Q_temp24,
       s => D_temp);
 
-PAC_Register : reg24to12
+--! Phase accumulator register	  
+PAC_Register : reg24to12  
    port map(
       D => D_temp, 
       reset => reset,
@@ -186,22 +203,26 @@ PAC_Register : reg24to12
 	  Q24 => Q_temp24,
       Q => Q_temp);
 
-Sine_LUT1 : Sine_LUT
+--! Receives the phase and returns the amplitude for sine wave	  
+Sine_LUT1 : Sine_LUT 
    port map(
 	  address => Q_temp,
       data => mux_in_sine_temp);
 
-Triangle_LUT1 : Triangle_LUT
+--! Receives the phase and returns the amplitude for triangle wave
+Triangle_LUT1 : Triangle_LUT 
    port map(
 	  address => Q_temp,
       data => mux_in_triangle_temp);
       
-Sawtooth_LUT1 : Sawtooth_LUT
+--! Receives the phase and returns the amplitude for sawtooth wave	  
+Sawtooth_LUT1 : Sawtooth_LUT 
     port map(
       address => Q_temp,
       data => mux_in_sawtooth_temp);
 
-Wave_MUX1 : Wave_MUX
+--! Receive all the waveforms and the wave type from user interface and outputs the selected waveform	  
+Wave_MUX1 : Wave_MUX 
    port map(clk => clk,
 				mux_in_sine => mux_in_sine_temp,
 				mux_in_triangle => mux_in_triangle_temp,
@@ -211,7 +232,8 @@ Wave_MUX1 : Wave_MUX
 				wave_type => wave_type,
         		mux_out => oscout);
 
-Square_Counter1 : Square_Counter
+--! Counter for square wave				
+Square_Counter1 : Square_Counter  
    port map(
 		counter_size => counter_size_temp,
 		reset => reset,
@@ -220,12 +242,14 @@ Square_Counter1 : Square_Counter
 		overflow => overflow_temp,
         square_counter_out => square_counter_out_temp);
 
-Square_Comparator1 : Square_Comparator
+--! Comparator for sqaure wave and duty cycle
+Square_Comparator1 : Square_Comparator 
    port map(
       counter_in => square_counter_out_temp, 
       reg_in => Square_Reg_Q_temp,
       comp_out => comp_out_temp);
 
+--! Register for storing duty cycle value of square wave	  
 Square_DC_Reg1 : Square_DC_Reg
    port map(
       D => duty_cycle, 
@@ -236,19 +260,22 @@ Square_DC_Reg1 : Square_DC_Reg
       slowclk => sample_clk,
       Q => Square_Reg_Q_temp);
 
-Square_RS_Latch1 : Square_RS_Latch
+--! Set-Reset Latch for generating square wave
+Square_RS_Latch1 : Square_RS_Latch  
    port map(
       clk => clk, 
       count_ov => overflow_temp, 
       comparator_out => comp_out_temp,
       Square_Out => mux_in_square_temp);
 
-WhiteNoise1 : WhiteNoise      
+--! Pseudo random number generator for white noise 	  
+WhiteNoise1 : WhiteNoise     
 port map(
     clk => clk,
     sample_clk  => sample_clk,
-    random_num  => mux_in_whitenoise_temp);   --output vector            
+    random_num  => mux_in_whitenoise_temp);           
 
+--! Calculates the new phase increment when the pitch bend wheel is moved		
 PROCESS(clk)
 BEGIN
 IF rising_edge(clk) THEN

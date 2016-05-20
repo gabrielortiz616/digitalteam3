@@ -30,6 +30,7 @@ END COMPONENT counter;
 
 SIGNAL time_S, count_L : STD_LOGIC_VECTOR(11 downto 0):="000000000000";
 SIGNAL gain, count : STD_LOGIC:='0';
+SIGNAL LFO_from_micro_temp : STD_LOGIC_VECTOR(11 downto 0);
 --SIGNAL count_L : integer:=0;
 
 BEGIN
@@ -42,7 +43,7 @@ BEGIN
 	if(rising_edge(clk)) then
 		LFO_to_micro(6 downto 0) <= LFO_frequency;
 		LFO_to_micro(13 downto 7) <= LFO_depth;
-        if(count_L = "000000000000") then
+        if(LFO_from_micro(11 downto 0) /= LFO_from_micro_temp) then
             if(mode = "10") then				-- sawtooth
                 time_S <= STD_LOGIC_VECTOR((unsigned(LFO_from_micro(11 downto 0))) SLL 1);
         
@@ -50,6 +51,8 @@ BEGIN
                 time_S <= LFO_from_micro(11 downto 0);
         
             end if;
+            count_L <= "000000000000";
+            LFO_from_micro_temp <= LFO_from_micro(11 downto 0);
 		end if;
 	end if;
 end process;

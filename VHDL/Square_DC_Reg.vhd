@@ -1,18 +1,25 @@
+-------------------------------------------------------
+--! @file
+--! @brief Receives the value of the duty cycle from the user interface or LFO and outputs a value for the comparator
+-------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.std_logic_unsigned.ALL;
 USE ieee.numeric_std.ALL;
 
+--! Receives the counter size and the duty cycle value and outputs a calculates a value for the comparator
 ENTITY Square_DC_Reg IS
-PORT(D : IN STD_LOGIC_VECTOR(6 DOWNTO 0); -- duty cycle input.
-     counter_size : IN STD_LOGIC_VECTOR(11 dOWNTO 0); -- counter size input.
-     duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0);
-	 reset : IN STD_LOGIC; -- Reset
-	 clk : IN STD_LOGIC; -- clock.
-	 slowclk : IN STD_LOGIC; -- clock.
-	 Q : OUT STD_LOGIC_VECTOR(11 DOWNTO 0)); -- output.
+PORT(D : IN STD_LOGIC_VECTOR(6 DOWNTO 0); --! duty cycle value input.
+     counter_size : IN STD_LOGIC_VECTOR(11 dOWNTO 0); --! counter size input.
+     duty_integer_out : out STD_LOGIC_VECTOR (6 downto 0); --! Integer value of duty cycle out to show in LCD Display
+	 reset : IN STD_LOGIC; --! Reset active low
+	 clk : IN STD_LOGIC; --! Main clock.
+	 slowclk : IN STD_LOGIC; --! Sample clock.
+	 Q : OUT STD_LOGIC_VECTOR(11 DOWNTO 0)); -- output value.
 END Square_DC_Reg;
 
+
+--! The duty cycle value is in the range 0 to 127, to calculate the value that the counter should go up to before it toggles the output we divide the counter size set by the look up table into a number set by the division of the range into 100 (as duty cycles varies from 0 to 100)
 ARCHITECTURE arch_Square_DC_Reg OF Square_DC_Reg IS
 
 BEGIN

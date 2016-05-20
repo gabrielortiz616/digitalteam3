@@ -1,9 +1,17 @@
+-------------------------------------------------------
+--! @file
+--! @brief Translate MIDI Note to number of clock cycle counts in the square wave counter
+-------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
+
+--! Receive the MIDI Note number and returns the counter size for the square counter
 entity MIDI_Count_LUT is
- port ( address : in std_logic_vector(7 downto 0);
-    data : out std_logic_vector(11 downto 0));
+ port ( address : in std_logic_vector(7 downto 0); --! MIDI Note
+    data : out std_logic_vector(11 downto 0)); --! Counter size of the square wave counter
  end entity MIDI_Count_LUT;
+ 
+ --! Translate MIDI Note to number of clock cycle counts in the square wave counter
  architecture arch_MIDI_Count_LUT of MIDI_Count_LUT is
     type mem is array ( 0 to 82) of std_logic_vector(11 downto 0);
     constant MIDI_rom : mem := (

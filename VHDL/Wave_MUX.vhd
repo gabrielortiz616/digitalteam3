@@ -1,19 +1,25 @@
+-------------------------------------------------------
+--! @file
+--! @brief Selectes the signal to be output according to the selection from the user interface
+-------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.std_logic_arith.ALL;
 USE ieee.std_logic_unsigned.ALL;
 
+--! Inputs include the waveforms from the look up tables and the wave type selected on the user interface
 ENTITY Wave_MUX IS
-PORT(clk : IN STD_LOGIC; -- clock.
-      mux_in_sine : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- sine input.
-	  mux_in_triangle : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- triangle input.
-	  mux_in_square : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- square input.
-	  mux_in_sawtooth : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- sawtooth input.
-	  mux_in_whitenoise : IN STD_LOGIC_VECTOR(11 DOWNTO 0); -- whitenoise input.
-	  wave_type : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
-	  mux_out : OUT STD_LOGIC_VECTOR(11 DOWNTO 0)); -- output.
+PORT(clk : IN STD_LOGIC; --! clock.
+      mux_in_sine : IN STD_LOGIC_VECTOR(11 DOWNTO 0); --! sine input.
+	  mux_in_triangle : IN STD_LOGIC_VECTOR(11 DOWNTO 0); --! triangle input.
+	  mux_in_square : IN STD_LOGIC_VECTOR(11 DOWNTO 0); --! square input.
+	  mux_in_sawtooth : IN STD_LOGIC_VECTOR(11 DOWNTO 0); --! sawtooth input.
+	  mux_in_whitenoise : IN STD_LOGIC_VECTOR(11 DOWNTO 0); --! whitenoise input.
+	  wave_type : IN STD_LOGIC_VECTOR(2 DOWNTO 0); --! Wave type selection
+	  mux_out : OUT STD_LOGIC_VECTOR(11 DOWNTO 0)); --! output wave from the oscillators.
 END Wave_MUX;
 
+--! The mux selects the waveform that should be output from the oscillator according to the request of the user
 ARCHITECTURE arch_Wave_MUX OF Wave_MUX IS
 
 BEGIN

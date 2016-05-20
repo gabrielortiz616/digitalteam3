@@ -138,7 +138,7 @@ BEGIN
                 elsif(release='1') then
                     EWave <= STD_LOGIC_VECTOR((signed(STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*(countR_S/2))) SLL 1) + 2048);
                 else
-                    EWave <= (OTHERS => '0');
+                    EWave <= "100000000000";
          end if;
 
        end if;

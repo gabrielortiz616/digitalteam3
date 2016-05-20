@@ -1,16 +1,22 @@
+-------------------------------------------------------
+--! @file
+--! @brief Receives data of the Ooffset from the MIDI interface and reutrns how many notes the second oscillator should be shifted
+-------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use ieee.std_logic_unsigned.all;
 USE ieee.numeric_std.ALL;
 
+--! The main input is the offfset value from the control knobs or LFO and the actual Note to be played, returns the new note to be played after offset
 entity Offset_LUT is
-   Port (  clk : IN STD_LOGIC;
-           offset_in : in STD_LOGIC_VECTOR (6 downto 0);
-           offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0);
-           midi_note  : in STD_LOGIC_VECTOR (7 downto 0);
-           midi_note_temp : out STD_LOGIC_VECTOR (7 downto 0));
+   Port (  clk : IN STD_LOGIC; --! Clock
+           offset_in : in STD_LOGIC_VECTOR (6 downto 0); --! Offset value
+           offset_integer_out : out STD_LOGIC_VECTOR (4 downto 0); -- Offset integer out to display in LCD display
+           midi_note  : in STD_LOGIC_VECTOR (7 downto 0); --! Actual MIDI Note
+           midi_note_temp : out STD_LOGIC_VECTOR (7 downto 0)); --! New MIDI Note to be played after the offset
 end Offset_LUT;
 
+--! Based on a look up table, receives a value in the range of 0 to 127 and returns a new MIDI note shifted in the range -8 to +7 notes-
 architecture arch_Offset of Offset_LUT is
 
 begin

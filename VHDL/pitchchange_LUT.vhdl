@@ -1,9 +1,17 @@
+-------------------------------------------------------
+--! @file
+--! @brief Translates the pitch bend value change to a Multiplicator used to calculate the new phase increment in the NCO
+-------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
+
+--! Receives the Pitch bend rotation value from MIDI interface, returns phase increment multiplicator
 entity Pitch_LUT is
- port ( address : in std_logic_vector(7 downto 0);
-    data : out std_logic_vector(20 downto 0));
+ port ( address : in std_logic_vector(7 downto 0); --! Pitch Bend Value
+    data : out std_logic_vector(20 downto 0)); --! Multiplicator for calculating new phase increment
  end entity Pitch_LUT;
+ 
+ --! Translates the pitch bend value change to a Multiplicator used to calculate the new phase increment in the NCO
  architecture arch_Pitch_LUT of Pitch_LUT is
     type mem is array ( 0 to 127) of std_logic_vector(20 downto 0);
     constant pitch_rom : mem := (

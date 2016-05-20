@@ -60,12 +60,16 @@ int main(void) {
 	u8 counter_side_offset2 = 0;
 	u8 counter_side_output = 0;
 	u8 counter_side_cutoff = 0;
+	u8 counter_side_filtertype = 0;
+	u8 counter_side_lfotype = 0;
 	u8 counter_vertical = 0;
+	u8 counter_vertical_filters = 0;
 	volatile int Delay;
 	u8 flag = 0;
 	u8 menu = 0;
-	u8 run = 0;
-	u8 runa = 0;
+	u8 run1 = 0;
+	u8 run2 = 0;
+	u8 run3 = 0;
 	u8 in_flag = 2;
 	kc_initLCD();  // Initialize LCD
 	XGpio_Initialize(&GpioOutput, LEDS_ID);
@@ -80,6 +84,9 @@ int main(void) {
 	char output_offset[17];
 	char output_duty[17];
 	char cutoff[17];
+	char filtertype[17];
+	char lfotype[17];
+	char effects[17];
 	snprintf(wave1, 17, "%s", "Sine            ");
 	snprintf(wave2, 17, "%s", "Sine            ");
 	snprintf(duty1, 17, "%s", "MIDI            ");
@@ -89,6 +96,9 @@ int main(void) {
 	snprintf(output_offset, 17, "%s", "Offset:0        ");
 	snprintf(output_duty, 17, "%s", "DutyCycle:50%    ");
 	snprintf(cutoff, 17, "%s", "MIDI            ");
+	snprintf(filtertype, 17, "%s", "Lowpass         ");
+	snprintf(lfotype, 17, "%s", "Triangle        ");
+	snprintf(effects, 17, "%s", "None            ");
 	*(baseaddr_p + 0) = 0x00000001;
 	*(baseaddr_p + 1) = 0x00000000;
 	*(baseaddr_p + 0) = 0x00000002;
@@ -103,6 +113,10 @@ int main(void) {
 	*(baseaddr_p + 1) = 0x00000000;
 	*(baseaddr_p + 0) = 0x00000007;
 	*(baseaddr_p + 1) = 0x00000000;
+	*(baseaddr_p + 0) = 0x00000008;
+	*(baseaddr_p + 1) = 0x00000000;
+	*(baseaddr_p + 0) = 0x00000009;
+	*(baseaddr_p + 1) = 0x00000000;
 
 	// Filter variables
 
@@ -111,7 +125,7 @@ int main(void) {
 	int b0, a0, a1, a2, A, B, fs, fc, Q, temp1, temp2, temp3, b0_low, a0_low,
 			a1_low, a2_low, A_low, B_low, b0_high, a0_high, a1_high, a2_high,
 			A_high, B_high, b0_band, a0_band, a1_band, a2_band, A_band, B_band;
-	long tempin;
+	long tempin,tempin2;
 	int filter_type, current_frequency;
 	int fl;
 	int fh;
@@ -141,91 +155,89 @@ int main(void) {
 		fs = 40000;
 		filter_type = 1;	// 1=lowpass	2=highpass	3=bandpass	4=follow
 
-		if (filter_type == 1) {				// Lowpass
+		//if (filter_type == 1) {				// Lowpass
 
-			// Read multiplier output from register 1
-			//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 5));
+		// Read multiplier output from register 1
+		//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 5));
 
-			if (tempin != *(baseaddr_p + 5)) {
+		if (tempin != *(baseaddr_p + 5)) {
 
-				tempin = *(baseaddr_p + 5);
-				Q = (tempin / 4096);
-				fc = tempin - Q * 4096 + 10;
-				Q_temp = Q / 100;
+			tempin = *(baseaddr_p + 5);
+			Q = (tempin / 4096);
+			fc = tempin - Q * 4096 + 10;
+			Q_temp = Q / 100;
 
-				filteractive = tempin;
+			filteractive = tempin;
 
-				xil_printf("fc: %d \n\r", fc);
-				xil_printf("Q: %d \n\r", Q);
-				wp = tan(2 * 3.1415926 * fc / (2 * fs));
-				N = 1 * 1000
-						/ (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
+			xil_printf("fc: %d \n\r", fc);
+			xil_printf("Q: %d \n\r", Q);
+			wp = tan(2 * 3.1415926 * fc / (2 * fs));
+			N = 1 * 1000 / (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
 
-				tempb0 = N * wp * wp * 1024;
+			tempb0 = N * wp * wp * 1024;
 
-				tempa1 = 2 * N * (wp * wp - 1) * 1024;
-				tempa2 = N * (wp * wp - wp * 100 / (Q) + 1) * 1024;
+			tempa1 = 2 * N * (wp * wp - 1) * 1024;
+			tempa2 = N * (wp * wp - wp * 100 / (Q) + 1) * 1024;
 
-				b0 = tempb0;
+			b0 = tempb0;
 
-				a1 = abs(tempa1);
-				a2 = tempa2;
+			a1 = abs(tempa1);
+			a2 = tempa2;
 
-				B = b0;
+			B = b0;
 
-				A = a1 + (a2 * 4096);
-				*(baseaddr_p + 3) = A;
-				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
-				*(baseaddr_p + 4) = B;
-				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
+			A = a1 + (a2 * 4096);
+			*(baseaddr_p + 3) = A;
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 3));
+			*(baseaddr_p + 4) = B;
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 4));
 
-				for (Delay = 0; Delay < 50000; Delay++)
-					;
+			for (Delay = 0; Delay < 50000; Delay++)
+				;
 
-			}
-		} else if (filter_type == 2) {			// Highpass
+		}
+		//} else if (filter_type == 2) {			// Highpass
 
-			// Read multiplier output from register 1
-			//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 8));
+		// Read multiplier output from register 1
+		//xil_printf("Read : 0x%08x \n\r", *(baseaddr_p + 8));
 
-			if (tempin != *(baseaddr_p + 8)) {
+		if (tempin2 != *(baseaddr_p + 8)) {
 
-				tempin = *(baseaddr_p + 8);
+			tempin2 = *(baseaddr_p + 8);
 
-				Q = (tempin / 4096);
-				fc = tempin - Q * 4096;
-				Q_temp = Q / 100;
+			Q = (tempin2 / 4096);
+			fc = tempin2 - Q * 4096;
+			Q_temp = Q / 100;
 
-				xil_printf("fc: %d \n\r", fc);
-				xil_printf("Q: %d \n\r", Q);
-				wp = tan(2 * 3.1415926 * fc / (2 * fs));
-				N = 1 * 1000
-						/ (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
+			xil_printf("fc: %d \n\r", fc);
+			xil_printf("Q: %d \n\r", Q);
+			wp = tan(2 * 3.1415926 * fc / (2 * fs));
+			N = 1 * 1000 / (wp * wp * 1000 + (wp * 1000 * 100 / (Q)) + 1000);
 
-				b0 = N * 1024;
+			b0 = N * 1024;
 
-				a1 = abs(2 * N * (wp * wp - 1)) * 1024;
-				a2 = N * (wp * wp - wp * 100 / Q + 1) * 1024;
+			a1 = abs(2 * N * (wp * wp - 1)) * 1024;
+			a2 = N * (wp * wp - wp * 100 / Q + 1) * 1024;
 
-				//b0 = 967;
-				//a1=1931;
-				//a2=914;
+			//b0 = 967;
+			//a1=1931;
+			//a2=914;
 
-				B = b0;
+			B = b0;
 
-				A = a1 + (a2 * 4096);
+			A = a1 + (a2 * 4096);
 
-				*(baseaddr_p + 6) = A;
-				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 6));
-				*(baseaddr_p + 7) = B;
-				//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 7));
+			*(baseaddr_p + 6) = A;
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 6));
+			*(baseaddr_p + 7) = B;
+			//xil_printf("Wrote: 0x%08x \n\r", *(baseaddr_p + 7));
 
-				*(baseaddr_p + 9) = B;
+			*(baseaddr_p + 9) = B;
 
-				for (Delay = 0; Delay < 200000; Delay++)
-					;
+			for (Delay = 0; Delay < 200000; Delay++)
+				;
 
-			}
+		}
 //		} else if (filter_type == 3) {
 //
 //
@@ -289,7 +301,7 @@ int main(void) {
 //
 //
 
-		}
+		//}
 
 		// LFO
 		//xil_printf("Read LFO: 0x%08x \n\r", *(baseaddr_p + 13));
@@ -314,17 +326,19 @@ int main(void) {
 			for (Delay = 0; Delay < 1000000; Delay++)
 				;
 			menu = menu + 1;
-			if (menu == 2) {
+			if (menu == 3) {
 				menu = 0;
 			}
 			if (menu == 1) {
-				run = 1;
+				run1 = 1;
 			} else if (menu == 0) {
-				runa = 1;
+				run2 = 1;
+			} else if (menu == 2) {
+				run3 = 1;
 			}
 		}
 		if (menu == 1) {
-			if (run == 1) {
+			if (run1 == 1) {
 				if (counter_vertical == 0) {
 					kc_LCDPrintString("Wave Type Osc1: ", wave1);
 				} else if (counter_vertical == 1) {
@@ -337,17 +351,15 @@ int main(void) {
 					kc_LCDPrintString("Offset Osc2:    ", offset2);
 				} else if (counter_vertical == 5) {
 					kc_LCDPrintString("Output Signal:  ", out);
-				} else if (counter_vertical == 6) {
-					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
 				}
-				run = 0;
+				run1 = 0;
 			}
 			if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1) & 0x00000002)
 					!= 0) {
 				counter_vertical = counter_vertical + 1;
 				for (Delay = 0; Delay < 1000000; Delay++)
 					;
-				if (counter_vertical == 7) {
+				if (counter_vertical == 6) {
 					counter_vertical = 0;
 				}
 				if (counter_vertical == 0) {
@@ -362,8 +374,6 @@ int main(void) {
 					kc_LCDPrintString("Offset Osc2:    ", offset2);
 				} else if (counter_vertical == 5) {
 					kc_LCDPrintString("Output Signal:  ", out);
-				} else if (counter_vertical == 6) {
-					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
 				}
 			} else if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
 					& 0x00000001) != 0) {
@@ -371,7 +381,7 @@ int main(void) {
 					;
 				XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 				if (counter_vertical == 0) {
-					counter_vertical = 6;
+					counter_vertical = 5;
 				} else {
 					counter_vertical = counter_vertical - 1;
 				}
@@ -387,8 +397,6 @@ int main(void) {
 					kc_LCDPrintString("Offset Osc2:    ", offset2);
 				} else if (counter_vertical == 5) {
 					kc_LCDPrintString("Output Signal:  ", out);
-				} else if (counter_vertical == 6) {
-					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
 				}
 			}
 
@@ -409,7 +417,7 @@ int main(void) {
 						;
 					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 					if (counter_side_wave1 == 0) {
-						counter_side_wave1 = 6;
+						counter_side_wave1 = 5;
 					} else {
 						counter_side_wave1 = counter_side_wave1 - 1;
 					}
@@ -687,11 +695,143 @@ int main(void) {
 						snprintf(out, 17, "%s", "ADC+OSC2        ");
 					}
 				}
-			} else if (counter_vertical == 6) {  //FilterCutoff
+			}
+		} else if (menu == 0) {
+			eval1 = *(baseaddr_p + 2);
+			if ((eval1 != eval2)) {
+				eval2 = eval1;
+				if (eval1 <= -2147483549) {
+					in_flag = 1;
+				} else {
+					in_flag = 0;
+				}
+			} else if (run2 == 1) {
+				kc_LCDPrintString(output_offset, output_duty);
+				run2 = 0;
+			}
+			if (in_flag == 1) {
+				if ((duty_ev != *(baseaddr_p + 2)) || (run2 == 1)) {
+					duty_ev = *(baseaddr_p + 2);
+					duty_int = 0xFFFFFF80 | *(baseaddr_p + 2);
+					if ((duty_int >= -128) && (duty_int <= -27)) {
+						duty_int = duty_int + 128;
+					}
+					snprintf(output_duty, 17, "DutyCycle:%d%%    ", duty_int);
+					kc_LCDPrintString(output_offset, output_duty);
+					run2 = 0;
+					//xil_printf("%d", eval1);
+				}
+				in_flag = 2;
+			}
+			if (in_flag == 0) {
+				if ((offset_ev != *(baseaddr_p + 2)) || (run2 == 1)) {
+					offset_ev = *(baseaddr_p + 2);
+					offset_int = 0xFFFFFFE0 | *(baseaddr_p + 2);
+					if ((offset_int >= -32) && (offset_int <= -25)) {
+						offset_int = offset_int + 32;
+					}
+					snprintf(output_offset, 17, "Offset:%d        ",
+							offset_int);
+					kc_LCDPrintString(output_offset, output_duty);
+					run2 = 0;
+				}
+				in_flag = 2;
+			}
+		} else if (menu == 2) {
+			if (run3 == 1) {
+				if (counter_vertical_filters == 0) {
+					kc_LCDPrintString("Filter Type:    ", filtertype);
+				} else if (counter_vertical_filters == 1) {
+					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
+				} else if (counter_vertical_filters == 2) {
+					kc_LCDPrintString("LFO Wavetype:   ", lfotype);
+				} else if (counter_vertical_filters == 3) {
+					kc_LCDPrintString("Effects:        ", effects);
+				}
+				run3 = 0;
+			}
+
+			if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1) & 0x00000002)
+					!= 0) {
+				counter_vertical_filters = counter_vertical_filters + 1;
+				for (Delay = 0; Delay < 1000000; Delay++)
+					;
+				if (counter_vertical_filters == 4) {
+					counter_vertical_filters = 0;
+				}
+				if (counter_vertical_filters == 0) {
+					kc_LCDPrintString("Filter Type:    ", filtertype);
+				} else if (counter_vertical_filters == 1) {
+					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
+				} else if (counter_vertical_filters == 2) {
+					kc_LCDPrintString("LFO Wavetype:   ", lfotype);
+				} else if (counter_vertical_filters == 3) {
+					kc_LCDPrintString("Effects:        ", effects);
+				}
+			} else if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+					& 0x00000001) != 0) {
+				for (Delay = 0; Delay < 1000000; Delay++)
+					;
+				XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
+				if (counter_vertical_filters == 0) {
+					counter_vertical_filters = 3;
+				} else {
+					counter_vertical_filters = counter_vertical_filters - 1;
+				}
+				if (counter_vertical_filters == 0) {
+					kc_LCDPrintString("Filter Type:    ", filtertype);
+				} else if (counter_vertical_filters == 1) {
+					kc_LCDPrintString("Filter Cutoff:  ", cutoff);
+				} else if (counter_vertical_filters == 2) {
+					kc_LCDPrintString("LFO Wavetype:   ", lfotype);
+				} else if (counter_vertical_filters == 3) {
+					kc_LCDPrintString("Effects:        ", effects);
+				}
+			}
+			if (counter_vertical_filters == 0) { // Filter Type
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000004) != 0) {
+					counter_side_filtertype = counter_side_filtertype + 1;
+					for (Delay = 0; Delay < 1000000; Delay++)
+						;
+					if (counter_side_filtertype == 3) {
+						counter_side_filtertype = 0;
+					}
+					flag = 1;
+				}
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000008) != 0) {
+					for (Delay = 0; Delay < 1000000; Delay++)
+						;
+					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
+					if (counter_side_filtertype == 0) {
+						counter_side_filtertype = 2;
+					} else {
+						counter_side_filtertype = counter_side_filtertype - 1;
+					}
+					flag = 1;
+				}
+				if (flag == 1) {
+					flag = 0;
+					if (counter_side_filtertype == 1) {
+						kc_LCDPrintString("Filter Type:    ",
+								"Lowpass         ");
+						*(baseaddr_p + 0) = 0x00000008;
+						*(baseaddr_p + 1) = 0x00000000;
+						snprintf(filtertype, 17, "%s", "Lowpass         ");
+					} else if (counter_side_filtertype == 2) {
+						kc_LCDPrintString("Filter Type:    ",
+								"Highpass        ");
+						*(baseaddr_p + 0) = 0x00000008;
+						*(baseaddr_p + 1) = 0x00000001;
+						snprintf(filtertype, 17, "%s", "Highpass        ");
+					}
+				}
+			} else if (counter_vertical_filters == 1) { // Filter Cutoff
 				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
 						& 0x00000004) != 0) {
 					counter_side_cutoff = counter_side_cutoff + 1;
-					for (Delay = 0; Delay < 900000; Delay++)
+					for (Delay = 0; Delay < 1000000; Delay++)
 						;
 					if (counter_side_cutoff == 3) {
 						counter_side_cutoff = 0;
@@ -700,7 +840,7 @@ int main(void) {
 				}
 				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
 						& 0x00000008) != 0) {
-					for (Delay = 0; Delay < 900000; Delay++)
+					for (Delay = 0; Delay < 1000000; Delay++)
 						;
 					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 					if (counter_side_cutoff == 0) {
@@ -717,59 +857,62 @@ int main(void) {
 								"MIDI            ");
 						*(baseaddr_p + 0) = 0x00000007;
 						*(baseaddr_p + 1) = 0x00000000;
-						snprintf(cutoff, 17, "%s", "MIDI             ");
+						snprintf(cutoff, 17, "%s", "MIDI            ");
 					} else if (counter_side_cutoff == 2) {
 						kc_LCDPrintString("Filter Cutoff:  ",
 								"LFO             ");
 						*(baseaddr_p + 0) = 0x00000007;
 						*(baseaddr_p + 1) = 0x00000001;
-						snprintf(cutoff, 17, "%s", "LFO              ");
+						snprintf(cutoff, 17, "%s", "LFO             ");
 					}
 				}
-			}
-		} else if (menu == 0) {
-			eval1 = *(baseaddr_p + 2);
-			if ((eval1 != eval2)) {
-				eval2 = eval1;
-				if (eval1 <= -2147483549) {
-					in_flag = 1;
-				} else {
-					in_flag = 0;
-				}
-			} else if (runa == 1) {
-				kc_LCDPrintString(output_offset, output_duty);
-				runa = 0;
-			}
-			if (in_flag == 1) {
-				if ((duty_ev != *(baseaddr_p + 2)) || (runa == 1)) {
-					duty_ev = *(baseaddr_p + 2);
-					duty_int = 0xFFFFFF80 | *(baseaddr_p + 2);
-					if ((duty_int >= -128) && (duty_int <= -27)) {
-						duty_int = duty_int + 128;
+			} else if (counter_vertical_filters == 2) { // LFO type
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000004) != 0) {
+					counter_side_lfotype = counter_side_lfotype + 1;
+					for (Delay = 0; Delay < 1000000; Delay++)
+						;
+					if (counter_side_lfotype == 4) {
+						counter_side_lfotype = 0;
 					}
-					snprintf(output_duty, 17, "DutyCycle:%d%%    ", duty_int);
-					kc_LCDPrintString(output_offset, output_duty);
-					runa = 0;
-					//xil_printf("%d", eval1);
+					flag = 1;
 				}
-				in_flag = 2;
-			}
-			if (in_flag == 0) {
-				if ((offset_ev != *(baseaddr_p + 2)) || (runa == 1)) {
-					offset_ev = *(baseaddr_p + 2);
-					offset_int = 0xFFFFFFE0 | *(baseaddr_p + 2);
-					if ((offset_int >= -32) && (offset_int <= -25)) {
-						offset_int = offset_int + 32;
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000008) != 0) {
+					for (Delay = 0; Delay < 1000000; Delay++)
+						;
+					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
+					if (counter_side_lfotype == 0) {
+						counter_side_lfotype = 3;
+					} else {
+						counter_side_lfotype = counter_side_lfotype - 1;
 					}
-					snprintf(output_offset, 17, "Offset:%d        ",
-							offset_int);
-					kc_LCDPrintString(output_offset, output_duty);
-					runa = 0;
+					flag = 1;
 				}
-				in_flag = 2;
+				if (flag == 1) {
+					flag = 0;
+					if (counter_side_lfotype == 1) {
+						kc_LCDPrintString("LFO Wavetype:   ",
+								"Triangle        ");
+						*(baseaddr_p + 0) = 0x00000009;
+						*(baseaddr_p + 1) = 0x00000000;
+						snprintf(lfotype, 17, "%s", "Triangle        ");
+					} else if (counter_side_lfotype == 2) {
+						kc_LCDPrintString("LFO Wavetype:   ",
+								"Square          ");
+						*(baseaddr_p + 0) = 0x00000009;
+						*(baseaddr_p + 1) = 0x00000001;
+						snprintf(lfotype, 17, "%s", "Square          ");
+					} else if (counter_side_lfotype == 3) {
+						kc_LCDPrintString("LFO Wavetype:   ",
+								"Sawtooth        ");
+						*(baseaddr_p + 0) = 0x00000009;
+						*(baseaddr_p + 1) = 0x00000002;
+						snprintf(lfotype, 17, "%s", "Sawtooth        ");
+					}
+				}
 			}
 		}
-
 	}
 
 	return 0;
