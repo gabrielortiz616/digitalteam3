@@ -12,7 +12,7 @@ entity MIDI_par is
 				clk : in  STD_LOGIC; --! Clock
 				midi_in   : in  std_logic; --! MIDI In
 				Q_value, cut_off, LFO_max, LFO_freq, time_sustain,
-				time_release, time_attack, osc_offset, duty_cycle :
+				time_release, time_attack, osc_offset, duty_cycle, time_echo :
 				OUT STD_LOGIC_VECTOR(6 downto 0); --! Parameters to be modified
 				midi_ch   : out std_logic_vector(3 downto 0); --! MIDI Channel
 				note_on : OUT STD_LOGIC; --! Note ON signal
@@ -96,6 +96,9 @@ BEGIN
 
 		ELSIF(midi_control_temp = "0010000") then -- setting resonance -- CHANNEL 5
 			Q_value <= midi_control_data_temp;
+			
+	    ELSIF(midi_control_temp = "1010000") then -- setting effect -- CHANNEL 6
+            time_echo <= midi_control_data_temp;
 		END IF;
 	END IF;
 END PROCESS;

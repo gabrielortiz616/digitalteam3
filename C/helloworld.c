@@ -62,6 +62,7 @@ int main(void) {
 	u8 counter_side_cutoff = 0;
 	u8 counter_side_filtertype = 0;
 	u8 counter_side_lfotype = 0;
+	u8 counter_side_effecttype = 0;
 	u8 counter_vertical = 0;
 	u8 counter_vertical_filters = 0;
 	volatile int Delay;
@@ -117,6 +118,8 @@ int main(void) {
 	*(baseaddr_p + 1) = 0x00000000;
 	*(baseaddr_p + 0) = 0x00000009;
 	*(baseaddr_p + 1) = 0x00000000;
+	*(baseaddr_p + 0) = 0x0000000A;
+	*(baseaddr_p + 1) = 0x00000000;
 
 	// Filter variables
 
@@ -144,9 +147,10 @@ int main(void) {
 	// LFO variables
 
 	long LFO_in;
-	float LFO_depth, LFO_frequency;
-	int LFO_out;
+	int LFO_depth, LFO_frequency;
+	long LFO_out;
 	long LFOactive;
+	int fsystem;
 
 	while (1) {
 
@@ -305,6 +309,7 @@ int main(void) {
 
 		// LFO
 		//xil_printf("Read LFO: 0x%08x \n\r", *(baseaddr_p + 13));
+		fsystem = 100000000;
 		LFO_in = *(baseaddr_p + 13);
 
 		if (LFO_in != LFOactive) {
@@ -312,9 +317,10 @@ int main(void) {
 			LFOactive = LFO_in;
 
 			LFO_depth = (LFO_in / 128);
-			LFO_frequency = (LFO_in - LFO_depth * 128) * 100 / 450;
+			LFO_frequency = (LFO_in - LFO_depth * 128);
 			xil_printf("LFO: %d \n\r", LFO_frequency);
-			LFO_out = fs / (2 * LFO_frequency * LFO_depth);
+			LFO_out = fsystem / (2 * (LFO_frequency/6.35) * LFO_depth);
+			xil_printf("LFO: %d \n\r", LFO_out);
 
 			*(baseaddr_p + 12) = LFO_out;
 		}
@@ -866,7 +872,7 @@ int main(void) {
 						snprintf(cutoff, 17, "%s", "LFO             ");
 					}
 				}
-			} else if (counter_vertical_filters == 2) { // LFO type
+			} else if (counter_vertical_filters == 2) { // LFO Type
 				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
 						& 0x00000004) != 0) {
 					counter_side_lfotype = counter_side_lfotype + 1;
@@ -909,6 +915,51 @@ int main(void) {
 						*(baseaddr_p + 0) = 0x00000009;
 						*(baseaddr_p + 1) = 0x00000002;
 						snprintf(lfotype, 17, "%s", "Sawtooth        ");
+					}
+				}
+			}else if (counter_vertical_filters == 3) { // Effect type
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000004) != 0) {
+					counter_side_effecttype = counter_side_effecttype + 1;
+					for (Delay = 0; Delay < 1000000; Delay++)
+						;
+					if (counter_side_effecttype == 4) {
+						counter_side_effecttype = 0;
+					}
+					flag = 1;
+				}
+				if ((XGpio_ReadReg(XPAR_PUSH_BUTTONS_5BITS_BASEADDR, 1)
+						& 0x00000008) != 0) {
+					for (Delay = 0; Delay < 1000000; Delay++)
+						;
+					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
+					if (counter_side_effecttype == 0) {
+						counter_side_effecttype = 3;
+					} else {
+						counter_side_effecttype = counter_side_effecttype - 1;
+					}
+					flag = 1;
+				}
+				if (flag == 1) {
+					flag = 0;
+					if (counter_side_effecttype == 1) {
+						kc_LCDPrintString("Effects:        ",
+								"None           ");
+						*(baseaddr_p + 0) = 0x0000000A;
+						*(baseaddr_p + 1) = 0x00000000;
+						snprintf(effects, 17, "%s", "None            ");
+					} else if (counter_side_effecttype == 2) {
+						kc_LCDPrintString("Effects:        ",
+								"Echo            ");
+						*(baseaddr_p + 0) = 0x0000000A;
+						*(baseaddr_p + 1) = 0x00000001;
+						snprintf(effects, 17, "%s", "Echo            ");
+					} else if (counter_side_effecttype == 3) {
+						kc_LCDPrintString("Effects:        ",
+								"Reverb         ");
+						*(baseaddr_p + 0) = 0x0000000A;
+						*(baseaddr_p + 1) = 0x00000002;
+						snprintf(effects, 17, "%s", "Reverb          ");
 					}
 				}
 			}

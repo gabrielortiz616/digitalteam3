@@ -1,46 +1,59 @@
+-------------------------------------------------------
+--! @file
+--! @brief Envelope entity
+-------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 
+--! Description of Entity
 entity envelope is
-		Generic(WIDTH_wave: INTEGER :=12);
+		Generic(WIDTH_wave: INTEGER :=12); --! Amount of bits in the input and output
 		Port ( 
-				clk : in  STD_LOGIC;
-				sample_clk : in  STD_LOGIC;
-				FWave : in  STD_LOGIC_VECTOR (WIDTH_wave-1 downto 0);
-				time_release, time_attack, time_sustain : in STD_LOGIC_VECTOR(6 downto 0);
-	  			NOTE_ON: IN STD_LOGIC;
-				attack_debug : OUT STD_LOGIC;
-				EWave: out  STD_LOGIC_VECTOR (WIDTH_wave-1 downto 0)
+				clk : in  STD_LOGIC; --! clock (100 MHz)
+				sample_clk : in  STD_LOGIC; --! sample clock (40 kHz)
+				FWave : in  STD_LOGIC_VECTOR (WIDTH_wave-1 downto 0); --! Input waveform to the envelope
+				time_release : in STD_LOGIC_VECTOR(6 downto 0); --! Amount of time for release stage coming from MIDI interface
+				time_attack : in STD_LOGIC_VECTOR(6 downto 0); --! Amount of time for attack stage coming from MIDI interface
+				time_sustain : in STD_LOGIC_VECTOR(6 downto 0); --! Amount of time for sustain stage coming from MIDI interface
+	  			NOTE_ON: IN STD_LOGIC; --! Note on message coming from MIDI interface
+				EWave: out  STD_LOGIC_VECTOR (WIDTH_wave-1 downto 0) --! Output waveform from the envelope
 				);
 end envelope;
 
 
-
+--! @brief Envelope
+--! @detailed The envelope takes in an input waveform and scales the amplitude of it depending on what stage it is in. How long each stage is depends on the inputs from MIDI interface.
 architecture arch of envelope is
 
-
+--- Components definition ----
 COMPONENT counter IS
-      PORT(clk:IN STD_LOGIC;
-      	   sample_clk : in  STD_LOGIC;
-           count_max: IN STD_LOGIC_VECTOR(11 downto 0);
-	   count_duty: IN STD_LOGIC_VECTOR(11 downto 0);
-	   clk_out: OUT STD_LOGIC);
+      PORT(clk:IN STD_LOGIC; -- Clock
+      	   sample_clk : in  STD_LOGIC; -- Sample clock
+           count_max: IN STD_LOGIC_VECTOR(11 downto 0); -- Amount of clocks until clk_out changes to a 1
+	   count_duty: IN STD_LOGIC_VECTOR(11 downto 0); -- Amount of clocks from clk_out changes to a 1 until it becomes a 0
+	   clk_out: OUT STD_LOGIC); -- Clock enable output
 END COMPONENT counter;
 
--- Should take in the filtered waves and scale the amplitude of each by X 
--- Where X is a factor of 0% to 100% and is increased from 0 to 100 during the 
--- attack time. and then is held at 100% for the sustain time and then go from
--- 100 to 0 during the release time.
-SIGNAL count_S, countS_S, countA_S: INTEGER := 0;
-SIGNAL timeA_S, timeR_S, timeS_S: STD_LOGIC_VECTOR(11 downto 0);
-SIGNAL countR_S : INTEGER := 63;
-SIGNAL countA,countR,attack,sustain,release, countS : STD_LOGIC:='0';
-SIGNAL idle : STD_LOGIC:='1';
-SIGNAL max : INTEGER;
-SIGNAL time_attack_temp, time_sustain_temp, time_release_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000";
+SIGNAL countS_S: INTEGER := 0; --! Counter for the sustain stage
+SIGNAL countA_S: INTEGER := 0; --! Counter for the attack stage
+SIGNAL countR_S : INTEGER := 63; --! Counter for the release stage
+SIGNAL timeA_S: STD_LOGIC_VECTOR(11 downto 0); --! Count_max sent to counter component for attack
+SIGNAL timeR_S: STD_LOGIC_VECTOR(11 downto 0); --! Count_max sent to counter component for release
+SIGNAL timeS_S: STD_LOGIC_VECTOR(11 downto 0); --! Count_max sent to counter component for sustain
+SIGNAL countA : STD_LOGIC:='0'; --! Clock enable from the counter component for attack
+SIGNAL countR : STD_LOGIC:='0'; --! Clock enable from the counter component for release
+SIGNAL countS : STD_LOGIC:='0'; --! Clock enable from the counter component for sustain
+SIGNAL attack : STD_LOGIC:='0'; --! A '1' if envelope is in attack stage
+SIGNAL sustain : STD_LOGIC:='0'; --! A '1' if envelope is in sustain stage
+SIGNAL release : STD_LOGIC:='0'; --! A '1' if envelope is in release stage
+SIGNAL idle : STD_LOGIC:='1'; --! A '1' if envelope is idle
+SIGNAL time_attack_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000"; --! Temporary for attack time sent from MIDI interface
+SIGNAL time_sustain_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000"; --! Temporary for sustain time sent from MIDI interface
+SIGNAL time_release_temp : STD_LOGIC_VECTOR(6 downto 0):="0100000"; --! Temporary for release time sent from MIDI interface
 BEGIN
 
+--! Clock enable component for the attack stage
 counter_attack_comp:
 COMPONENT counter
          PORT MAP(clk=>clk,
@@ -48,8 +61,8 @@ COMPONENT counter
 	 	  count_max => timeA_S,
 		  count_duty => "000000000001",
 		  clk_out => countA);
--- 1 second we want this one to trigger every 3,125,000 cycles
 
+--! Clock enable component for sustain stage
 counter_sustain_comp:
 COMPONENT counter
          PORT MAP(clk=>clk,
@@ -58,6 +71,7 @@ COMPONENT counter
 		  count_duty => "000000000001",
 		  clk_out => countS);
 
+--! Clock enable component for the sustain stage
 counter_release_comp:
 COMPONENT counter
          PORT MAP(clk=>clk,
@@ -68,9 +82,7 @@ COMPONENT counter
 -- 1 second we want this one to trigger every 64/25 * 3,125,000
 
 
-
-max <= 64;
-
+--! Scales the input voltage depending on the stage and how long it has been in that stage and sends it out. Also converts the output to oscillate around 2048 instead of 0
 process(clk)
 BEGIN
 	if(rising_edge(clk)) then
@@ -81,7 +93,6 @@ BEGIN
 		if (countA='1') then
 			if(attack='1') then
 				if(countA_S < 63) then
-					--count_S <= countA_S + 1;
 					countA_S <= countA_S + 1;
 				else
 					attack <= '0';	
@@ -102,19 +113,14 @@ BEGIN
 		if (countR='1' ) then
 			if(release='1') then
 				if(countR_S > 45) then
-					--count_S <= countR_S - 5;
 					countR_S <= countR_S - 5;	
 				elsif(countR_S > 39) then 
-					--count_S <= countR_S - 4;
 					countR_S <= countR_S - 4;	
 				elsif(countR_S > 30) then
-					--count_S <= countR_S - 3;
 					countR_S <= countR_S - 3;	
 				elsif(countR_S > 15) then 
-					--count_S <= countR_S - 2;	
 					countR_S <= countR_S - 2;
 				elsif(countR_S > 0) then
-					--count_S <= countR_S - 1;	
 					countR_S <= countR_S - 1;
 				else
 					release <= '0';
@@ -134,7 +140,7 @@ BEGIN
 		if(attack='1') then
                     EWave <= STD_LOGIC_VECTOR((signed(STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*(countA_S/2))) SLL 1) + 2048);
                 elsif(sustain='1') then
-                    EWave <= STD_LOGIC_VECTOR(signed(FWave) + 2048);--STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*64 + 2048);
+                    EWave <= STD_LOGIC_VECTOR(signed(FWave) + 2048);
                 elsif(release='1') then
                     EWave <= STD_LOGIC_VECTOR((signed(STD_LOGIC_VECTOR(signed(FWave(11 downto 6))*(countR_S/2))) SLL 1) + 2048);
                 else
@@ -144,7 +150,4 @@ BEGIN
        end if;
 	end if;
 end process;
-
-
-
 end arch;
