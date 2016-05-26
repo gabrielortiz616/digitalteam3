@@ -800,7 +800,7 @@ int main(void) {
 					counter_side_filtertype = counter_side_filtertype + 1;
 					for (Delay = 0; Delay < 1000000; Delay++)
 						;
-					if (counter_side_filtertype == 3) {
+					if (counter_side_filtertype == 4) {
 						counter_side_filtertype = 0;
 					}
 					flag = 1;
@@ -811,7 +811,7 @@ int main(void) {
 						;
 					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 					if (counter_side_filtertype == 0) {
-						counter_side_filtertype = 2;
+						counter_side_filtertype = 3;
 					} else {
 						counter_side_filtertype = counter_side_filtertype - 1;
 					}
@@ -831,6 +831,12 @@ int main(void) {
 						*(baseaddr_p + 0) = 0x00000008;
 						*(baseaddr_p + 1) = 0x00000001;
 						snprintf(filtertype, 17, "%s", "Highpass        ");
+					} else if (counter_side_filtertype == 3) {
+						kc_LCDPrintString("Filter Type:    ",
+								"None            ");
+						*(baseaddr_p + 0) = 0x00000008;
+						*(baseaddr_p + 1) = 0x00000002;
+						snprintf(filtertype, 17, "%s", "None            ");
 					}
 				}
 			} else if (counter_vertical_filters == 1) { // Filter Cutoff
@@ -923,7 +929,7 @@ int main(void) {
 					counter_side_effecttype = counter_side_effecttype + 1;
 					for (Delay = 0; Delay < 1000000; Delay++)
 						;
-					if (counter_side_effecttype == 4) {
+					if (counter_side_effecttype == 5) {
 						counter_side_effecttype = 0;
 					}
 					flag = 1;
@@ -934,7 +940,7 @@ int main(void) {
 						;
 					XGpio_DiscreteWrite(&GpioOutput, LED_CHANNEL, 5);
 					if (counter_side_effecttype == 0) {
-						counter_side_effecttype = 3;
+						counter_side_effecttype = 4;
 					} else {
 						counter_side_effecttype = counter_side_effecttype - 1;
 					}
@@ -944,7 +950,7 @@ int main(void) {
 					flag = 0;
 					if (counter_side_effecttype == 1) {
 						kc_LCDPrintString("Effects:        ",
-								"None           ");
+								"None            ");
 						*(baseaddr_p + 0) = 0x0000000A;
 						*(baseaddr_p + 1) = 0x00000000;
 						snprintf(effects, 17, "%s", "None            ");
@@ -956,10 +962,16 @@ int main(void) {
 						snprintf(effects, 17, "%s", "Echo            ");
 					} else if (counter_side_effecttype == 3) {
 						kc_LCDPrintString("Effects:        ",
-								"Reverb         ");
+								"Reverb          ");
 						*(baseaddr_p + 0) = 0x0000000A;
 						*(baseaddr_p + 1) = 0x00000002;
 						snprintf(effects, 17, "%s", "Reverb          ");
+					} else if (counter_side_effecttype == 4) {
+						kc_LCDPrintString("Effects:        ",
+								"Vibrato         ");
+						*(baseaddr_p + 0) = 0x0000000A;
+						*(baseaddr_p + 1) = 0x00000003;
+						snprintf(effects, 17, "%s", "Vibrato         ");
 					}
 				}
 			}
