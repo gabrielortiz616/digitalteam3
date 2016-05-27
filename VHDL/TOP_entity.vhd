@@ -54,6 +54,7 @@ SIGNAL midi_pitch_temp, pitch_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL rate_temp : STD_LOGIC;
 SIGNAL duty_cycle_temp1 : STD_LOGIC_VECTOR(6 DOWNTO 0) := "1000010"; 
 SIGNAL pitch_on_out_temp : STD_LOGIC;
+SIGNAL midi_pitch_on_out_temp :STD_LOGIC;
 SIGNAL duty_cycle_temp2 : STD_LOGIC_VECTOR(6 DOWNTO 0) := "1000010"; 
 SIGNAL duty_cycle_midi : STD_LOGIC_VECTOR(6 DOWNTO 0);
 SIGNAL offset_temp : STD_LOGIC_VECTOR(6 DOWNTO 0);  
@@ -452,14 +453,18 @@ IF rising_edge(clk) THEN
     IF flag_effect_type = "01" THEN 
             Wave_OUT_temp <= echo_temp; 
             pitch_temp <= midi_pitch_temp; 
+            pitch_on_out_temp <= midi_pitch_on_out_temp;
         ELSIF flag_effect_type = "10" THEN
            Wave_OUT_temp <= reverb_temp;
            pitch_temp <= midi_pitch_temp;
+           pitch_on_out_temp <= midi_pitch_on_out_temp;
         ELSIF flag_effect_type = "11" THEN
             pitch_temp <= lfo_out_temp;
+            pitch_on_out_temp <= '1';
             Wave_OUT_temp <= EWave_temp; 
         ELSE
             pitch_temp <= midi_pitch_temp;
+            pitch_on_out_temp <= midi_pitch_on_out_temp;
             Wave_OUT_temp <= EWave_temp;
     END IF; 
 
@@ -501,7 +506,7 @@ MIDI_par_comp : MIDI_par
         duty_cycle => duty_cycle_midi,
         midi_ch => midi_ch_temp,
         note_on => note_on_temp,
-        pitch_on_out => pitch_on_out_temp,
+        pitch_on_out => midi_pitch_on_out_temp,
         time_echo => time_echo_temp,
         midi_pitch => midi_pitch_temp    
         );
